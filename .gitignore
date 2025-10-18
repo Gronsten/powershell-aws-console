@@ -1,0 +1,107 @@
+# ============================================
+# PowerShell AWS Management Console .gitignore
+# ============================================
+
+# Configuration files with sensitive data
+config.json
+*.backup-*
+
+# Okta configuration
+.okta/
+okta.yaml
+
+# AWS credentials and configuration
+.aws/
+credentials
+config
+
+# Output directories
+vpn_output/
+meraki-api/backups/
+
+# Logs
+*.log
+logs/
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# PowerShell module cache
+PSReadLine/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node.js (if using npm for any reason)
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (for Meraki backup script)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv
+pip-log.txt
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# RDP Manager files
+*.rdg
+
+# Personal notes and TODO tracking (optional - uncomment if needed)
+# TODO.md
+# NOTES.md
+
+# Test files
+test_*.ps1
+*_test.ps1
+
+# Session files
+*.pssc
+*.psd
+
+# Coverage and test results
+coverage/
+*.coverage
+
+# Build artifacts
+dist/
+build/
+*.exe
+*.msi
+
+# Compiled files
+*.dll
+*.pdb

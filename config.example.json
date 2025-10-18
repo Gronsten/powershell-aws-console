@@ -1,0 +1,165 @@
+{
+  "paths": {
+    "workingDirectory": "C:\\path\\to\\your\\working\\directory",
+    "profilePath": "C:\\Users\\YourUsername\\Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1",
+    "oktaYamlPath": "C:\\Users\\YourUsername\\.okta\\okta.yaml",
+    "rdcManagerPath": "C:\\path\\to\\RDCMan.exe",
+    "linksPath": "C:\\Users\\YourUsername\\Favorites\\Links\\"
+  },
+  "defaultConnection": {
+    "instance": "",
+    "remoteIP": "",
+    "localPort": "8443",
+    "remotePort": "443"
+  },
+  "aws": {
+    "defaultRegion": "us-east-1",
+    "fortiGateDeviceTypeId": "7125681a"
+  },
+  "environments": {
+    "manual": {
+      "displayName": "Manual Account Selection",
+      "region": "us-east-1",
+      "highlightChar": "M",
+      "highlightPos": 0,
+      "defaultRemoteIP": "",
+      "defaultRemotePort": "",
+      "defaultLocalPort": "",
+      "instances": {
+        "jump-box": ""
+      },
+      "boxes": [],
+      "actions": [
+        "instanceManagement",
+        "vpnConnections"
+      ]
+    },
+    "exampleaccount": {
+      "oktaProfileMap": {
+        "Admin": "exampleaccount-OKTA-PROFILE-Admin",
+        "devops": "exampleaccount-OKTA-PROFILE-devops"
+      },
+      "preferredRole": "Admin",
+      "region": "us-east-1",
+      "instances": {
+        "jump-box": "",
+        "remote-host": ""
+      },
+      "accountId": "123456789012",
+      "defaultLocalPort": "8388",
+      "defaultRemoteIP": "",
+      "defaultRemotePort": "3389",
+      "boxes": [],
+      "actions": [
+        "instanceManagement"
+      ],
+      "availableRoles": [
+        "Admin",
+        "devops"
+      ],
+      "displayName": "Example Account",
+      "sessionDuration": "3600"
+    }
+  },
+  "actionDefinitions": {
+    "instanceManagement": {
+      "text": "Instance Management",
+      "highlightPos": 0,
+      "highlightChar": "I",
+      "function": "Show-InstanceManagementMenu"
+    },
+    "alohaBox": {
+      "text": "Aloha to ETS-NETTOOLS Box",
+      "highlightPos": 0,
+      "highlightChar": "A",
+      "function": "Show-AlohaBoxMenu"
+    },
+    "vpnConnections": {
+      "text": "Get VPN Connections",
+      "highlightPos": 0,
+      "highlightChar": "G",
+      "function": "Get-VpnConnections"
+    }
+  },
+  "standardActions": [
+    {
+      "text": "Change AWS Account",
+      "highlightPos": 7,
+      "highlightChar": "C",
+      "function": "Show-AwsAccountMenu"
+    }
+  ],
+  "menus": {
+    "Main Menu": [
+      {
+        "text": "Ping Google",
+        "action": "\r\n            Start-InteractivePing -Target \"google.com\"\r\n            pause\r\n        "
+      },
+      {
+        "text": "IP Config",
+        "action": "\r\n            Show-NetworkConfiguration\r\n            pause\r\n        "
+      },
+      {
+        "text": "AWS Login",
+        "action": "\r\n            Start-AwsWorkflow\r\n        "
+      },
+      {
+        "text": "PowerShell Profile Edit",
+        "action": "\r\n            Invoke-Expression \"code '$($script:Config.paths.profilePath)'\"\r\n            pause\r\n        "
+      },
+      {
+        "text": "Okta YAML Edit",
+        "action": "\r\n            Invoke-Expression \"code '$($script:Config.paths.oktaYamlPath)'\"\r\n            pause\r\n        "
+      },
+      {
+        "text": "Package Manager",
+        "action": "\r\n            Show-PackageManagerMenu\r\n        "
+      }
+    ],
+    "Package Manager": [
+      {
+        "text": "Manage Updates",
+        "action": "\r\n            Select-PackagesToUpdate\r\n            pause\r\n        "
+      },
+      {
+        "text": "List Installed Packages",
+        "action": "\r\n            Get-InstalledPackages\r\n            pause\r\n        "
+      },
+      {
+        "text": "Search Packages",
+        "action": "\r\n            Search-Packages\r\n            pause\r\n        "
+      }
+    ],
+    "Instance Management": [
+      {
+        "text": "View Current Instance Settings",
+        "action": " Show-CurrentInstanceSettings "
+      },
+      {
+        "text": "List Running Instances",
+        "action": " Get-RunningInstances "
+      },
+      {
+        "text": "Set Default Instance ID",
+        "action": " Set-DefaultInstanceId "
+      },
+      {
+        "text": "Set Default Remote Host Info",
+        "action": " Set-DefaultRemoteHostInfo "
+      },
+      {
+        "text": "Aloha Remote Access",
+        "action": " Start-AlohaRemoteAccess "
+      },
+      {
+        "text": "Test Instance Connectivity",
+        "action": " Test-InstanceConnectivity "
+      },
+      {
+        "text": "Get VPN Connections",
+        "action": " Get-VpnConnections "
+      }
+    ]
+  },
+  "awsAccountMenuOrder": []
+}

@@ -3877,11 +3877,12 @@ function Get-VpnConnections {
 
             # Save output to file
             $timestamp = Get-Date -Format "yyyyMMdd-HHmm"
-            $outputFile = "vpn_output\vpn_connections_$searchString`_$timestamp.txt"
+            $vpnOutputDir = Join-Path $PSScriptRoot "vpn_output"
+            $outputFile = Join-Path $vpnOutputDir "vpn_connections_$searchString`_$timestamp.txt"
 
             # Create vpn_output directory if it doesn't exist
-            if (-not (Test-Path "vpn_output")) {
-                New-Item -ItemType Directory -Path "vpn_output" -Force | Out-Null
+            if (-not (Test-Path $vpnOutputDir)) {
+                New-Item -ItemType Directory -Path $vpnOutputDir -Force | Out-Null
             }
 
             # Save formatted output to file

@@ -18,6 +18,7 @@ config
 # Output directories
 vpn_output/
 meraki-api/backups/
+configs/
 
 # Logs
 *.log

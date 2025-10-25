@@ -4,7 +4,7 @@
 
 $source = "C:\AppInstall\"
 $destination = "C:\Users\mark.campbell3\OneDrive - Chick-fil-A, Inc\DevBackups"
-$logFile = "C:\AppInstall\dev\misc-scripts\backup-log.txt"
+$logFile = "C:\AppInstall\dev\powershell-aws-console\backup-log.txt"
 
 # Create destination if it doesn't exist
 New-Item -ItemType Directory -Path $destination -Force -ErrorAction SilentlyContinue | Out-Null

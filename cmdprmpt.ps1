@@ -1704,14 +1704,14 @@ function Show-ArrowMenu {
 function Start-MerakiBackup {
     Write-Host "Starting Meraki Backup..." -ForegroundColor Green
     Write-Host ""
-    
+
     # Check if we're in the right directory or if meraki-api folder exists
     $merakiPath = Join-Path $script:Config.paths.workingDirectory "meraki-api"
-    
+
     if (Test-Path $merakiPath) {
         try {
             Push-Location $merakiPath
-            
+
             # Check if Python is available
             $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
             if (-not $pythonCmd) {
@@ -1719,25 +1719,25 @@ function Start-MerakiBackup {
                 pause
                 return
             }
-            
+
             # Check if backup.py exists
             if (-not (Test-Path "backup.py")) {
                 Write-Host "backup.py not found in meraki-api directory." -ForegroundColor Red
                 pause
                 return
             }
-            
+
             # Check if .env file exists
             if (-not (Test-Path ".env")) {
                 Write-Host "Warning: .env file not found. Make sure MERAKI_API_KEY is set in environment." -ForegroundColor Yellow
             }
-            
+
             Write-Host "Executing: python backup.py" -ForegroundColor Cyan
             Write-Host ""
-            
+
             # Run the backup script
             python backup.py
-            
+
             Write-Host ""
             Write-Host "Meraki backup completed." -ForegroundColor Green
         }
@@ -1752,7 +1752,115 @@ function Start-MerakiBackup {
         Write-Host "Meraki API directory not found at: $merakiPath" -ForegroundColor Red
         Write-Host "Please ensure the meraki-api folder exists in the working directory." -ForegroundColor Yellow
     }
-    
+
+    pause
+}
+
+function Start-CodeCount {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    $workingDir = $script:Config.paths.workingDirectory
+    $countScriptPath = Join-Path $workingDir "misc-scripts\count-lines.py"
+
+    # Check if Python is available
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pythonCmd) {
+        Write-Host "Python not found in PATH. Please ensure Python is installed." -ForegroundColor Red
+        pause
+        return
+    }
+
+    # Check if count-lines.py exists
+    if (-not (Test-Path $countScriptPath)) {
+        Write-Host "count-lines.py not found at: $countScriptPath" -ForegroundColor Red
+        pause
+        return
+    }
+
+    Write-Host "Options:" -ForegroundColor Yellow
+    Write-Host "  1. Count all projects (default)" -ForegroundColor White
+    Write-Host "  2. Count specific folder" -ForegroundColor White
+    Write-Host ""
+
+    $choice = Read-Host "Select option (1-2) or press Enter for default"
+
+    if ($choice -eq "2") {
+        Write-Host ""
+        Write-Host "Available projects:" -ForegroundColor Yellow
+        Get-ChildItem $workingDir -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
+            Write-Host "  - $($_.Name)" -ForegroundColor Cyan
+        }
+        Write-Host ""
+
+        $targetFolder = Read-Host "Enter folder name (or press Enter to cancel)"
+
+        if ([string]::IsNullOrWhiteSpace($targetFolder)) {
+            Write-Host "Cancelled." -ForegroundColor Yellow
+            pause
+            return
+        }
+
+        Write-Host ""
+        Write-Host "Executing: python $countScriptPath $targetFolder" -ForegroundColor Gray
+        Write-Host ""
+
+        python $countScriptPath $targetFolder
+    }
+    else {
+        Write-Host ""
+        Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+        Write-Host ""
+
+        python $countScriptPath
+    }
+
+    Write-Host ""
+    pause
+}
+
+function Start-BackupDevEnvironment {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  BACKUP DEVELOPMENT ENVIRONMENT            ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    $workingDir = $script:Config.paths.workingDirectory
+    $backupScriptPath = Join-Path $workingDir "misc-scripts\backup-dev.ps1"
+
+    # Check if backup-dev.ps1 exists
+    if (-not (Test-Path $backupScriptPath)) {
+        Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
+        pause
+        return
+    }
+
+    Write-Host "This will create a timestamped backup of your development environment." -ForegroundColor Yellow
+    Write-Host ""
+
+    $confirm = Read-Host "Continue with backup? (Y/n)"
+
+    if ($confirm.ToLower() -eq "n") {
+        Write-Host "Backup cancelled." -ForegroundColor Yellow
+        pause
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Executing: $backupScriptPath" -ForegroundColor Gray
+    Write-Host ""
+
+    try {
+        & $backupScriptPath
+        Write-Host ""
+        Write-Host "✅ Backup completed successfully!" -ForegroundColor Green
+    }
+    catch {
+        Write-Host ""
+        Write-Host "❌ Error during backup: $($_.Exception.Message)" -ForegroundColor Red
+    }
+
+    Write-Host ""
     pause
 }
 
@@ -1790,6 +1898,12 @@ function Show-MainMenu {
         }),
         (New-MenuAction "Meraki Backup" {
             Start-MerakiBackup
+        }),
+        (New-MenuAction "Code Count" {
+            Start-CodeCount
+        }),
+        (New-MenuAction "Backup Dev Environment" {
+            Start-BackupDevEnvironment
         }),
         (New-MenuAction "Package Manager" {
             Show-PackageManagerMenu

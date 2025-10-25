@@ -1789,7 +1789,8 @@ function Start-CodeCount {
     if ($choice -eq "2") {
         Write-Host ""
         Write-Host "Available projects:" -ForegroundColor Yellow
-        Get-ChildItem $workingDir -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
+        $devRoot = Split-Path $workingDir -Parent
+        Get-ChildItem $devRoot -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
             Write-Host "  - $($_.Name)" -ForegroundColor Cyan
         }
         Write-Host ""

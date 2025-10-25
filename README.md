@@ -44,6 +44,20 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
 - **Network Configuration**: Comprehensive display of network adapters, IPs, DNS, DHCP settings
 - **Sorted Display**: Adapters sorted by status (Up first) and IP type (routable first)
 
+### Development Utilities
+- **Code Line Counter**: Fast Python-based line counter with project-specific exclusions
+  - Count all projects or select specific folders interactively
+  - CLI support for flexible usage
+  - Handles multiple encodings and file types
+  - Project-aware exclusions (logs, backups, node_modules, etc.)
+- **Backup Dev Environment**: Automated development environment backup utility
+  - Uses robocopy for efficient mirroring
+  - Creates timestamped backups to OneDrive
+  - Interactive confirmation before execution
+- **Meraki Backup**: Automated Meraki network configuration backup
+  - Python-based backup script integration
+  - Environment variable validation
+
 ### Menu System Features
 - **Arrow-Key Navigation**: Intuitive up/down arrow navigation with Enter to select
 - **In-Menu Editing**:

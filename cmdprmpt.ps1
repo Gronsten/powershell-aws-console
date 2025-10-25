@@ -1775,89 +1775,202 @@ function Start-CodeCount {
         return
     }
 
-    # Get all project folders
+    # Initialize navigation state
     $devRoot = Split-Path $workingDir -Parent
-    $projectFolders = @()
-    Get-ChildItem $devRoot -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
-        $projectFolders += [PSCustomObject]@{
-            Name = $_.Name
-            Path = $_.FullName
-        }
-    }
-
-    # Add "All Projects" option at the beginning
-    $allOption = [PSCustomObject]@{
-        Name = "All Projects"
-        Path = $null
-    }
-    $menuOptions = @($allOption) + $projectFolders
-
-    # Initialize selection array
-    $selectedIndexes = New-Object bool[] $menuOptions.Count
-    $currentIndex = 0
+    $currentPath = $devRoot
+    $pathStack = @()
+    $selections = @{}  # Track selections by full path
     $done = $false
 
     while (-not $done) {
-        Clear-Host
-        Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
-        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+        # Build menu for current directory
+        $menuOptions = @()
 
-        Write-Host "Use Up/Down arrows to navigate, Space to select/deselect, Enter to count" -ForegroundColor Gray
-        Write-Host "Press A to select all, N to deselect all, Q to cancel`n" -ForegroundColor Gray
+        # Add "All Projects" at root level only
+        if ($currentPath -eq $devRoot) {
+            $menuOptions += [PSCustomObject]@{
+                Name = "All Projects"
+                Path = $null
+                Type = "Special"
+            }
+        }
 
+        # Add parent directory option if not at root
+        if ($currentPath -ne $devRoot) {
+            $menuOptions += [PSCustomObject]@{
+                Name = ".. (Parent Directory)"
+                Path = Split-Path $currentPath -Parent
+                Type = "Parent"
+            }
+        }
+
+        # Add subdirectories
+        Get-ChildItem $currentPath -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike ".*" } | Sort-Object Name | ForEach-Object {
+            $menuOptions += [PSCustomObject]@{
+                Name = "📁 $($_.Name)"
+                Path = $_.FullName
+                Type = "Directory"
+            }
+        }
+
+        # Add files
+        Get-ChildItem $currentPath -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike ".*" } | Sort-Object Name | ForEach-Object {
+            $menuOptions += [PSCustomObject]@{
+                Name = "📄 $($_.Name)"
+                Path = $_.FullName
+                Type = "File"
+            }
+        }
+
+        if ($menuOptions.Count -eq 0) {
+            Write-Host "Empty directory. Press any key to go back..." -ForegroundColor Yellow
+            [Console]::ReadKey($true) | Out-Null
+            if ($pathStack.Count -gt 0) {
+                $currentPath = $pathStack[-1]
+                $pathStack = $pathStack[0..($pathStack.Count - 2)]
+            }
+            continue
+        }
+
+        # Initialize selections for new items
+        $selectedIndexes = New-Object bool[] $menuOptions.Count
         for ($i = 0; $i -lt $menuOptions.Count; $i++) {
-            $option = $menuOptions[$i]
-            $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
-            $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
-            $color = if ($i -eq $currentIndex) { "Green" } else { "White" }
-
-            Write-Host "$arrow $checkbox $($option.Name)" -ForegroundColor $color
+            if ($menuOptions[$i].Path -and $selections.ContainsKey($menuOptions[$i].Path)) {
+                $selectedIndexes[$i] = $selections[$menuOptions[$i].Path]
+            }
         }
 
-        $key = [Console]::ReadKey($true)
+        $currentIndex = 0
 
-        switch ($key.Key) {
-            'UpArrow' {
-                $currentIndex = ($currentIndex - 1 + $menuOptions.Count) % $menuOptions.Count
-            }
-            'DownArrow' {
-                $currentIndex = ($currentIndex + 1) % $menuOptions.Count
-            }
-            'Spacebar' {
-                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
-            }
-            'A' {
-                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
-                    $selectedIndexes[$i] = $true
+        # Menu loop
+        $menuDone = $false
+        while (-not $menuDone) {
+            Clear-Host
+            Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+            Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
+            Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+            # Show current path
+            $relativePath = $currentPath.Replace($devRoot, "~")
+            if ($relativePath -eq "") { $relativePath = "~" }
+            Write-Host "Current: $relativePath" -ForegroundColor Yellow
+            Write-Host ""
+
+            Write-Host "↑↓ navigate | → enter dir | ← parent | Space select | Enter count | A all | N none | Q cancel`n" -ForegroundColor Gray
+
+            for ($i = 0; $i -lt $menuOptions.Count; $i++) {
+                $option = $menuOptions[$i]
+                $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
+                $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
+                $color = if ($i -eq $currentIndex) { "Green" } else { "White" }
+
+                # Don't show checkbox for parent directory
+                if ($option.Type -eq "Parent") {
+                    Write-Host "$arrow     $($option.Name)" -ForegroundColor $color
+                } else {
+                    Write-Host "$arrow $checkbox $($option.Name)" -ForegroundColor $color
                 }
             }
-            'N' {
-                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
-                    $selectedIndexes[$i] = $false
+
+            $key = [Console]::ReadKey($true)
+
+            switch ($key.Key) {
+                'UpArrow' {
+                    $currentIndex = ($currentIndex - 1 + $menuOptions.Count) % $menuOptions.Count
                 }
-            }
-            'Enter' {
-                $done = $true
-            }
-            'Q' {
-                Write-Host "`nCancelled." -ForegroundColor Yellow
-                pause
-                return
+                'DownArrow' {
+                    $currentIndex = ($currentIndex + 1) % $menuOptions.Count
+                }
+                'RightArrow' {
+                    # Navigate into directory
+                    if ($menuOptions[$currentIndex].Type -eq "Directory") {
+                        $pathStack += $currentPath
+                        $currentPath = $menuOptions[$currentIndex].Path
+                        $menuDone = $true
+                    }
+                }
+                'LeftArrow' {
+                    # Navigate to parent
+                    if ($currentPath -ne $devRoot) {
+                        if ($pathStack.Count -gt 0) {
+                            $currentPath = $pathStack[-1]
+                            $pathStack = $pathStack[0..($pathStack.Count - 2)]
+                        } else {
+                            $currentPath = $devRoot
+                        }
+                        $menuDone = $true
+                    }
+                }
+                'Spacebar' {
+                    # Toggle selection (except for parent directory)
+                    if ($menuOptions[$currentIndex].Type -ne "Parent") {
+                        $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+                        if ($menuOptions[$currentIndex].Path) {
+                            $selections[$menuOptions[$currentIndex].Path] = $selectedIndexes[$currentIndex]
+                        }
+                    } else {
+                        # Parent directory navigation
+                        if ($pathStack.Count -gt 0) {
+                            $currentPath = $pathStack[-1]
+                            $pathStack = $pathStack[0..($pathStack.Count - 2)]
+                        } else {
+                            $currentPath = Split-Path $currentPath -Parent
+                        }
+                        $menuDone = $true
+                    }
+                }
+                'A' {
+                    for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                        if ($menuOptions[$i].Type -ne "Parent") {
+                            $selectedIndexes[$i] = $true
+                            if ($menuOptions[$i].Path) {
+                                $selections[$menuOptions[$i].Path] = $true
+                            }
+                        }
+                    }
+                }
+                'N' {
+                    for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                        if ($menuOptions[$i].Type -ne "Parent") {
+                            $selectedIndexes[$i] = $false
+                            if ($menuOptions[$i].Path) {
+                                $selections[$menuOptions[$i].Path] = $false
+                            }
+                        }
+                    }
+                }
+                'Enter' {
+                    $done = $true
+                    $menuDone = $true
+                }
+                'Q' {
+                    Write-Host "`nCancelled." -ForegroundColor Yellow
+                    pause
+                    return
+                }
             }
         }
     }
 
-    # Get selected folders
-    $selectedFolders = @()
+    # Get all selected items
+    $selectedItems = @()
+    foreach ($path in $selections.Keys) {
+        if ($selections[$path]) {
+            $selectedItems += $path
+        }
+    }
+
+    # Check for "All Projects"
+    $countAll = $false
     for ($i = 0; $i -lt $menuOptions.Count; $i++) {
-        if ($selectedIndexes[$i]) {
-            $selectedFolders += $menuOptions[$i]
+        if ($selectedIndexes[$i] -and $menuOptions[$i].Name -eq "All Projects") {
+            $countAll = $true
+            break
         }
     }
 
-    if ($selectedFolders.Count -eq 0) {
-        Write-Host "`nNo folders selected." -ForegroundColor Yellow
+    if ($selectedItems.Count -eq 0 -and -not $countAll) {
+        Write-Host "`nNo items selected." -ForegroundColor Yellow
         pause
         return
     }
@@ -1867,20 +1980,22 @@ function Start-CodeCount {
     Write-Host "║  CODE LINE COUNTER - RESULTS               ║" -ForegroundColor Cyan
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-    # Count lines for each selected folder
-    foreach ($folder in $selectedFolders) {
-        if ($folder.Name -eq "All Projects") {
-            Write-Host "Counting: All Projects" -ForegroundColor Yellow
-            Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
-            Write-Host ""
-            python $countScriptPath
-        }
-        else {
-            Write-Host "Counting: $($folder.Name)" -ForegroundColor Yellow
-            Write-Host "Executing: python $countScriptPath $($folder.Name)" -ForegroundColor Gray
-            Write-Host ""
-            python $countScriptPath $folder.Name
-        }
+    # Count all projects if selected
+    if ($countAll) {
+        Write-Host "Counting: All Projects" -ForegroundColor Yellow
+        Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+        Write-Host ""
+        python $countScriptPath
+        Write-Host ""
+    }
+
+    # Count each selected item
+    foreach ($itemPath in $selectedItems) {
+        $relativePath = $itemPath.Replace($devRoot + "\", "")
+        Write-Host "Counting: $relativePath" -ForegroundColor Yellow
+        Write-Host "Executing: python $countScriptPath `"$itemPath`"" -ForegroundColor Gray
+        Write-Host ""
+        python $countScriptPath "$itemPath"
         Write-Host ""
     }
 

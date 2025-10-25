@@ -1762,7 +1762,7 @@ function Start-CodeCount {
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
     $workingDir = $script:Config.paths.workingDirectory
-    $countScriptPath = Join-Path $workingDir "misc-scripts\count-lines.py"
+    $countScriptPath = Join-Path $workingDir "count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
@@ -1826,7 +1826,7 @@ function Start-BackupDevEnvironment {
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
     $workingDir = $script:Config.paths.workingDirectory
-    $backupScriptPath = Join-Path $workingDir "misc-scripts\backup-dev.ps1"
+    $backupScriptPath = Join-Path $workingDir "backup-dev.ps1"
 
     # Check if backup-dev.ps1 exists
     if (-not (Test-Path $backupScriptPath)) {

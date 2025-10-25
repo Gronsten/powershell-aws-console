@@ -1775,42 +1775,115 @@ function Start-CodeCount {
         return
     }
 
-    # Build menu items
+    # Get all project folders
     $devRoot = Split-Path $workingDir -Parent
-    $menuItems = @("Count All Projects")
-
-    # Add all project folders
+    $projectFolders = @()
     Get-ChildItem $devRoot -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
-        $menuItems += $_.Name
+        $projectFolders += [PSCustomObject]@{
+            Name = $_.Name
+            Path = $_.FullName
+        }
     }
 
-    # Show arrow menu
-    $choice = Show-ArrowMenu -MenuItems $menuItems -Title "Code Line Counter - Select Target"
+    # Add "All Projects" option at the beginning
+    $allOption = [PSCustomObject]@{
+        Name = "All Projects"
+        Path = $null
+    }
+    $menuOptions = @($allOption) + $projectFolders
 
-    if ($choice -eq -1) {
-        return  # User pressed ESC
+    # Initialize selection array
+    $selectedIndexes = New-Object bool[] $menuOptions.Count
+    $currentIndex = 0
+    $done = $false
+
+    while (-not $done) {
+        Clear-Host
+        Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+        Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
+        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+        Write-Host "Use Up/Down arrows to navigate, Space to select/deselect, Enter to count" -ForegroundColor Gray
+        Write-Host "Press A to select all, N to deselect all, Q to cancel`n" -ForegroundColor Gray
+
+        for ($i = 0; $i -lt $menuOptions.Count; $i++) {
+            $option = $menuOptions[$i]
+            $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
+            $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
+            $color = if ($i -eq $currentIndex) { "Green" } else { "White" }
+
+            Write-Host "$arrow $checkbox $($option.Name)" -ForegroundColor $color
+        }
+
+        $key = [Console]::ReadKey($true)
+
+        switch ($key.Key) {
+            'UpArrow' {
+                $currentIndex = ($currentIndex - 1 + $menuOptions.Count) % $menuOptions.Count
+            }
+            'DownArrow' {
+                $currentIndex = ($currentIndex + 1) % $menuOptions.Count
+            }
+            'Spacebar' {
+                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+            }
+            'A' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $true
+                }
+            }
+            'N' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $false
+                }
+            }
+            'Enter' {
+                $done = $true
+            }
+            'Q' {
+                Write-Host "`nCancelled." -ForegroundColor Yellow
+                pause
+                return
+            }
+        }
+    }
+
+    # Get selected folders
+    $selectedFolders = @()
+    for ($i = 0; $i -lt $menuOptions.Count; $i++) {
+        if ($selectedIndexes[$i]) {
+            $selectedFolders += $menuOptions[$i]
+        }
+    }
+
+    if ($selectedFolders.Count -eq 0) {
+        Write-Host "`nNo folders selected." -ForegroundColor Yellow
+        pause
+        return
     }
 
     Clear-Host
     Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
+    Write-Host "║  CODE LINE COUNTER - RESULTS               ║" -ForegroundColor Cyan
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-    if ($choice -eq 0) {
-        # Count all projects
-        Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+    # Count lines for each selected folder
+    foreach ($folder in $selectedFolders) {
+        if ($folder.Name -eq "All Projects") {
+            Write-Host "Counting: All Projects" -ForegroundColor Yellow
+            Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+            Write-Host ""
+            python $countScriptPath
+        }
+        else {
+            Write-Host "Counting: $($folder.Name)" -ForegroundColor Yellow
+            Write-Host "Executing: python $countScriptPath $($folder.Name)" -ForegroundColor Gray
+            Write-Host ""
+            python $countScriptPath $folder.Name
+        }
         Write-Host ""
-        python $countScriptPath
-    }
-    else {
-        # Count specific folder
-        $targetFolder = $menuItems[$choice]
-        Write-Host "Executing: python $countScriptPath $targetFolder" -ForegroundColor Gray
-        Write-Host ""
-        python $countScriptPath $targetFolder
     }
 
-    Write-Host ""
     pause
 }
 

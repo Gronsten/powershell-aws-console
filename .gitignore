@@ -23,6 +23,7 @@ configs/
 # Logs
 *.log
 logs/
+backup-log.txt
 
 # Windows system files
 Thumbs.db

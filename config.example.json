@@ -112,6 +112,22 @@
         "action": "\r\n            Invoke-Expression \"code '$($script:Config.paths.oktaYamlPath)'\"\r\n            pause\r\n        "
       },
       {
+        "text": "Whitelist Links Folder",
+        "action": "\r\n            Invoke-Expression \"icacls '$($script:Config.paths.linksPath)' /t /setintegritylevel m\"\r\n            pause\r\n        "
+      },
+      {
+        "text": "Meraki Backup",
+        "action": "\r\n            Start-MerakiBackup\r\n        "
+      },
+      {
+        "text": "Code Count",
+        "action": "\r\n            Start-CodeCount\r\n        "
+      },
+      {
+        "text": "Backup Dev Environment",
+        "action": "\r\n            Start-BackupDevEnvironment\r\n        "
+      },
+      {
         "text": "Package Manager",
         "action": "\r\n            Show-PackageManagerMenu\r\n        "
       }

@@ -1,6 +1,6 @@
 
 # DevBackup Script
-# Backs up dev folder to OneDrive
+# Backs up dev folder to configured backup destination
 
 # Load configuration
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path

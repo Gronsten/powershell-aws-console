@@ -52,7 +52,7 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
   - Project-aware exclusions (logs, backups, node_modules, etc.)
 - **Backup Dev Environment**: Automated development environment backup utility
   - Uses robocopy for efficient mirroring
-  - Creates timestamped backups to OneDrive
+  - Creates timestamped backups to configured destination
   - Interactive confirmation before execution
 - **Meraki Backup**: Automated Meraki network configuration backup
   - Python-based backup script integration

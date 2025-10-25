@@ -3875,27 +3875,6 @@ function Get-VpnConnections {
             Write-Host "Total VPN connections found: $($vpnConnections.Count)" -ForegroundColor Green
             Write-Host ""
 
-            # Save output to file
-            $timestamp = Get-Date -Format "yyyyMMdd-HHmm"
-            $vpnOutputDir = Join-Path $PSScriptRoot "vpn_output"
-            $outputFile = Join-Path $vpnOutputDir "vpn_connections_$searchString`_$timestamp.txt"
-
-            # Create vpn_output directory if it doesn't exist
-            if (-not (Test-Path $vpnOutputDir)) {
-                New-Item -ItemType Directory -Path $vpnOutputDir -Force | Out-Null
-            }
-
-            # Save formatted output to file
-            $fileContent = "VPN Connection Results - Search: '$searchString' - Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n`n"
-            $fileContent += ("{0,-40} {1}`n" -f "NAME", "VPN CONNECTION ID")
-            $fileContent += ("{0,-40} {1}`n" -f "----", "-----------------")
-            foreach ($vpn in $vpnConnections) {
-                $fileContent += ("{0,-40} {1}`n" -f $vpn.Name, $vpn.Id)
-            }
-            $fileContent | Out-File -FilePath $outputFile -Encoding UTF8
-            Write-Host "Results saved to: $outputFile" -ForegroundColor Cyan
-            Write-Host ""
-
             # Ask about FortiGate configs
             if ($vpnConnections.Count -gt 0) {
                 $configChoice = Read-Host "Pull FortiGate configurations for $($vpnConnections.Count) VPN connection(s)? (Y/n)"
@@ -3920,10 +3899,66 @@ function Get-VpnConnections {
 function Get-FortiGateConfigs {
     param([array]$VpnConnections)
 
-    Write-Host "FortiGate configuration download temporarily disabled for testing" -ForegroundColor Yellow
+    Write-Host "Downloading FortiGate configurations for $($VpnConnections.Count) VPN connection(s)..." -ForegroundColor Cyan
+    Write-Host ""
 
-    # Simplified placeholder implementation
-    Write-Host "Would download configs for $($VpnConnections.Count) VPN connections" -ForegroundColor Cyan
+    # Build profile parameter using the stored AWS profile name
+    $profileParam = if ($global:currentAwsProfile) {
+        "--profile $global:currentAwsProfile"
+    } else {
+        ""
+    }
+
+    # Create output directory for configs
+    $configOutputDir = Join-Path $PSScriptRoot "vpn_output"
+
+    if (-not (Test-Path $configOutputDir)) {
+        New-Item -ItemType Directory -Path $configOutputDir -Force | Out-Null
+    }
+
+    $successCount = 0
+    $failCount = 0
+
+    foreach ($vpn in $VpnConnections) {
+        $vpnId = $vpn.Id
+        $vpnName = $vpn.Name
+
+        Write-Host "Downloading config for: $vpnName ($vpnId)..." -ForegroundColor White
+
+        try {
+            # Download FortiGate-specific VPN configuration using AWS CLI
+            $configFile = Join-Path $configOutputDir "$vpnName.txt"
+
+            # Get the FortiGate device sample configuration from AWS
+            # Device type ID 7125681a is for FortiGate
+            $awsCommand = "aws ec2 get-vpn-connection-device-sample-configuration $profileParam --no-paginate --vpn-connection-id `"$vpnId`" --vpn-connection-device-type-id `"7125681a`" --internet-key-exchange-version `"ikev1`" --output text"
+            $config = Invoke-Expression $awsCommand
+
+            if ($config -and $config -ne "None" -and $LASTEXITCODE -eq 0) {
+                # Save configuration to file
+                $config | Out-File -FilePath $configFile -Encoding UTF8
+                Write-Host "  Success - Saved to: $configFile" -ForegroundColor Green
+                $successCount++
+            }
+            else {
+                Write-Host "  Failed - No configuration available for $vpnName" -ForegroundColor Yellow
+                $failCount++
+            }
+        }
+        catch {
+            Write-Host "  Failed - Error downloading config: $($_.Exception.Message)" -ForegroundColor Red
+            $failCount++
+        }
+
+        Write-Host ""
+    }
+
+    # Summary
+    Write-Host "Download Summary:" -ForegroundColor Cyan
+    Write-Host "  Success: $successCount" -ForegroundColor Green
+    Write-Host "  Failed: $failCount" -ForegroundColor $(if ($failCount -gt 0) { "Yellow" } else { "Green" })
+    Write-Host "  Output directory: $configOutputDir" -ForegroundColor Cyan
+    Write-Host ""
 }
 
 # --- Script Execution Start ---

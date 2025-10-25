@@ -1757,64 +1757,57 @@ function Start-MerakiBackup {
 }
 
 function Start-CodeCount {
-    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
     $workingDir = $script:Config.paths.workingDirectory
     $countScriptPath = Join-Path $workingDir "count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if (-not $pythonCmd) {
-        Write-Host "Python not found in PATH. Please ensure Python is installed." -ForegroundColor Red
+        Write-Host "`nPython not found in PATH. Please ensure Python is installed." -ForegroundColor Red
         pause
         return
     }
 
     # Check if count-lines.py exists
     if (-not (Test-Path $countScriptPath)) {
-        Write-Host "count-lines.py not found at: $countScriptPath" -ForegroundColor Red
+        Write-Host "`ncount-lines.py not found at: $countScriptPath" -ForegroundColor Red
         pause
         return
     }
 
-    Write-Host "Options:" -ForegroundColor Yellow
-    Write-Host "  1. Count all projects (default)" -ForegroundColor White
-    Write-Host "  2. Count specific folder" -ForegroundColor White
-    Write-Host ""
+    # Build menu items
+    $devRoot = Split-Path $workingDir -Parent
+    $menuItems = @("Count All Projects")
 
-    $choice = Read-Host "Select option (1-2) or press Enter for default"
-
-    if ($choice -eq "2") {
-        Write-Host ""
-        Write-Host "Available projects:" -ForegroundColor Yellow
-        $devRoot = Split-Path $workingDir -Parent
-        Get-ChildItem $devRoot -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
-            Write-Host "  - $($_.Name)" -ForegroundColor Cyan
-        }
-        Write-Host ""
-
-        $targetFolder = Read-Host "Enter folder name (or press Enter to cancel)"
-
-        if ([string]::IsNullOrWhiteSpace($targetFolder)) {
-            Write-Host "Cancelled." -ForegroundColor Yellow
-            pause
-            return
-        }
-
-        Write-Host ""
-        Write-Host "Executing: python $countScriptPath $targetFolder" -ForegroundColor Gray
-        Write-Host ""
-
-        python $countScriptPath $targetFolder
+    # Add all project folders
+    Get-ChildItem $devRoot -Directory | Where-Object { $_.Name -notlike ".*" } | ForEach-Object {
+        $menuItems += $_.Name
     }
-    else {
-        Write-Host ""
+
+    # Show arrow menu
+    $choice = Show-ArrowMenu -MenuItems $menuItems -Title "Code Line Counter - Select Target"
+
+    if ($choice -eq -1) {
+        return  # User pressed ESC
+    }
+
+    Clear-Host
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  CODE LINE COUNTER                         ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    if ($choice -eq 0) {
+        # Count all projects
         Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
         Write-Host ""
-
         python $countScriptPath
+    }
+    else {
+        # Count specific folder
+        $targetFolder = $menuItems[$choice]
+        Write-Host "Executing: python $countScriptPath $targetFolder" -ForegroundColor Gray
+        Write-Host ""
+        python $countScriptPath $targetFolder
     }
 
     Write-Host ""

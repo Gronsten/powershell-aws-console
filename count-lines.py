@@ -45,7 +45,7 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
             if file_path.name != 'vpn.tf':
                 return True
 
-        # ets-nettools: exclude etsnettoolsdev subdirectory
+        # ets-nettools: exclude dev environment subdirectory
         elif project == 'ets-nettools':
             if 'etsnettoolsdev' in parts:
                 return True

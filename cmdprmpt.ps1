@@ -2471,7 +2471,7 @@ function Sync-AwsAccountsFromOkta {
     $idpMap = Get-OktaIdpMapping
 
     # Parse "Updated profile" lines from okta output
-    # Example: Updated profile "entitynetworkhubprod-CFA-OKTA-PROD-Admin" in credentials file
+    # Example: Updated profile "exampleaccount-CFA-OKTA-PROD-Admin" in credentials file
     $discoveredAccounts = @{}
     $profileMatches = [regex]::Matches($oktaOutput, 'Updated profile "([^"]+)"')
 

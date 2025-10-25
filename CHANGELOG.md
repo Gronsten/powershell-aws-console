@@ -84,15 +84,15 @@ All notable changes to this project have been documented during development.
 ```json
 {
   "awsAccountMenuOrder": [
-    "etsnettoolsprod:Admin",
-    "etsnettoolsdev:Admin",
-    "cfawebsgprod:Admin"
+    "exampleaccount1:Admin",
+    "exampleaccount2:Admin",
+    "exampleaccount3:Admin"
   ],
   "environments": {
-    "etsnettoolsprod": {
+    "exampleaccount1": {
       "customMenuNames": {
-        "Admin": "Production NetTools - Admin Role",
-        "default": "Production NetTools"
+        "Admin": "Production Account - Admin Role",
+        "default": "Production Account"
       }
     }
   }
@@ -191,7 +191,7 @@ All notable changes to this project have been documented during development.
 **Redesigned AWS Account Menu to show Account+Role combinations**:
 - Menu displays each account+role combination as separate item
 - Format: "friendlyname (accountId) - Role: RoleName"
-- Example: "entitynetworkhubprod (054427526671) - Role: Admin"
+- Example: "exampleaccount (123456789012) - Role: Admin"
 - Users select specific role from menu instead of prompt after selection
 - Modified Start-AwsLoginForAccount to accept PreselectedRole parameter
 - Accounts without roles show as: "friendlyname (accountId)"
@@ -564,7 +564,7 @@ All notable changes to this project have been documented during development.
 ### AWS Profile Authentication
 
 **Fixed AWS profile authentication issue** (CRITICAL BUG FIX):
-- Root Cause: All accounts showed instances from entitynetworkhubdev
+- Root Cause: All accounts showed instances from wrong account
 - Issue: Previously removed --profile flag incorrectly
 - Reality: okta-aws-cli only sets environment variables in "exec" mode
 - Solution: Store actual Okta profile name in $global:currentAwsProfile
@@ -575,7 +575,7 @@ All notable changes to this project have been documented during development.
 - Updated credential validation to use correct profile
 - Each AWS account now shows its own instances
 - All AWS CLI commands use: --profile $global:currentAwsProfile
-- Fixes issue where any account showed entitynetworkhubdev's instances
+- Fixes issue where any account showed wrong account's instances
 
 ---
 

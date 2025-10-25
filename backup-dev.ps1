@@ -2,9 +2,22 @@
 # DevBackup Script
 # Backs up dev folder to OneDrive
 
-$source = "C:\AppInstall\"
-$destination = "C:\Users\mark.campbell3\OneDrive - Chick-fil-A, Inc\DevBackups"
-$logFile = "C:\AppInstall\dev\powershell-aws-console\backup-log.txt"
+# Load configuration
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$configPath = Join-Path $scriptDir "config.json"
+
+if (-not (Test-Path $configPath)) {
+    Write-Error "Config file not found at: $configPath"
+    Write-Error "Please create config.json from config.example.json"
+    exit 1
+}
+
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+
+# Read paths from config
+$source = $config.paths.backupSource
+$destination = Join-Path $env:USERPROFILE $config.paths.backupDestination
+$logFile = Join-Path $scriptDir $config.paths.backupLogFile
 
 # Create destination if it doesn't exist
 New-Item -ItemType Directory -Path $destination -Force -ErrorAction SilentlyContinue | Out-Null

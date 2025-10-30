@@ -346,6 +346,31 @@ function Update-Check {
         Write-Host "  ⚠️  npm not found or error checking status" -ForegroundColor Red
     }
 
+    # Check pip packages
+    Write-Host "`n📦 pip packages:" -ForegroundColor Yellow
+    try {
+        # Check if Python is available
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCmd) {
+            Write-Host "  ⚠️  Python not found" -ForegroundColor Red
+        } else {
+            # Check for outdated pip packages
+            $pipOutdated = pip list --outdated 2>&1 | Out-String
+            if ($pipOutdated -match "Package\s+Version\s+Latest") {
+                $pipOutdated -split "`n" | ForEach-Object {
+                    # Skip notice lines and empty lines
+                    if ($_.Trim() -and $_ -notmatch '^\[notice\]') {
+                        Write-Host "  $_" -ForegroundColor White
+                    }
+                }
+            } else {
+                Write-Host "  ✅ All pip packages up to date" -ForegroundColor Green
+            }
+        }
+    } catch {
+        Write-Host "  ⚠️  pip not found or error checking status" -ForegroundColor Red
+    }
+
     # Check winget packages
     Write-Host "`n📦 winget packages:" -ForegroundColor Yellow
     try {
@@ -388,6 +413,9 @@ function Update-All {
 
     # Update npm
     Update-npm
+
+    # Update pip
+    Update-Pip
 
     $endTime = Get-Date
     $duration = $endTime - $startTime
@@ -474,6 +502,56 @@ function Update-Winget {
     }
 }
 
+function Update-Pip {
+    [CmdletBinding()]
+    param()
+
+    Write-Host "`n🔄 Updating pip packages..." -ForegroundColor Cyan
+
+    try {
+        # Check if Python is available
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCmd) {
+            Write-Host "  ⚠️  Python not found" -ForegroundColor Red
+            return
+        }
+
+        # Update pip itself first
+        Write-Host "  → Updating pip..." -ForegroundColor Gray
+        python.exe -m pip install --upgrade pip
+
+        # Check what's outdated
+        Write-Host "  → Checking for outdated packages..." -ForegroundColor Gray
+        $outdated = pip list --outdated 2>&1 | Out-String
+
+        # Parse outdated output to see if there are packages to update
+        if ($outdated -match "Package\s+Version\s+Latest") {
+            # Extract package names (skip header and separator lines)
+            $outdatedLines = $outdated -split "`n" | Where-Object {
+                $_ -match '^\S+\s+\S+\s+\S+' -and $_ -notmatch '^(Package|---)'
+            }
+
+            if ($outdatedLines.Count -gt 0) {
+                Write-Host "  → Updating packages..." -ForegroundColor Gray
+                foreach ($line in $outdatedLines) {
+                    if ($line -match '^(\S+)') {
+                        $packageName = $matches[1]
+                        Write-Host "    Updating $packageName..." -ForegroundColor Gray
+                        pip install --upgrade --upgrade-strategy only-if-needed $packageName 2>&1 | Out-Null
+                    }
+                }
+                Write-Host "✅ pip packages updated" -ForegroundColor Green
+            } else {
+                Write-Host "  ✅ All pip packages already up to date" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "  ✅ All pip packages already up to date" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "❌ Error updating pip: $_" -ForegroundColor Red
+    }
+}
+
 function Get-InstalledPackages {
     [CmdletBinding()]
     param()
@@ -504,6 +582,57 @@ function Get-InstalledPackages {
         $npmList | ForEach-Object { Write-Host $_ }
     } catch {
         Write-Host "  ⚠️  npm not found" -ForegroundColor Red
+    }
+
+    # pip packages
+    Write-Host "`n📦 pip packages:" -ForegroundColor Yellow
+    Write-Host ""
+    try {
+        # Check if Python is available
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCmd) {
+            Write-Host "  ⚠️  Python not found" -ForegroundColor Red
+        } else {
+            # Ask if user wants to see dependency tree
+            $showDepTree = Read-Host "Display pip dependency tree (pipdeptree)? (y/N)"
+            Write-Host ""
+
+            if ($showDepTree.ToLower() -eq "y") {
+                # Check if pipdeptree is available
+                $pipdeptreeCmd = Get-Command pipdeptree -ErrorAction SilentlyContinue
+                if ($pipdeptreeCmd) {
+                    Write-Host "📊 pip dependency tree:" -ForegroundColor Cyan
+                    Write-Host ""
+                    pipdeptree 2>&1 | ForEach-Object {
+                        if ($_.Trim()) {
+                            Write-Host $_
+                        }
+                    }
+                } else {
+                    Write-Host "  ⚠️  pipdeptree not found" -ForegroundColor Red
+                    Write-Host "  Install with: pip install pipdeptree" -ForegroundColor Gray
+                    Write-Host ""
+                    Write-Host "  Showing standard pip list instead:" -ForegroundColor Gray
+                    Write-Host ""
+                    $pipList = pip list 2>&1 | Out-String
+                    $pipList -split "`n" | ForEach-Object {
+                        if ($_.Trim()) {
+                            Write-Host $_
+                        }
+                    }
+                }
+            } else {
+                # Show standard pip list
+                $pipList = pip list 2>&1 | Out-String
+                $pipList -split "`n" | ForEach-Object {
+                    if ($_.Trim()) {
+                        Write-Host $_
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Host "  ⚠️  pip not found" -ForegroundColor Red
     }
 
     # Prompt before showing winget packages
@@ -677,6 +806,132 @@ function Select-PackagesToUpdate {
         }
     } catch {
         Write-Host "  ⚠️  Error checking npm" -ForegroundColor Red
+    }
+
+    # Check pip
+    Write-Host "Checking pip for updates..." -ForegroundColor Gray
+    try {
+        # Check if Python is available
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if ($pythonCmd) {
+            $pipOutdated = pip list --outdated 2>&1 | Out-String
+            if ($pipOutdated -match "Package\s+Version\s+Latest") {
+                # Parse pip list output
+                # Format: Package    Version    Latest    Type
+                #         -------    -------    ------    ----
+                #         requests   2.28.0     2.31.0    wheel
+                $pipLines = $pipOutdated -split "`n"
+                $inTable = $false
+
+                foreach ($line in $pipLines) {
+                    # Skip notice lines
+                    if ($line -match '^\[notice\]') {
+                        continue
+                    }
+
+                    # Find the header line
+                    if ($line -match 'Package\s+Version\s+Latest') {
+                        $inTable = $true
+                        continue
+                    }
+
+                    # Skip separator line
+                    if ($line -match '^-+') {
+                        continue
+                    }
+
+                    # Parse table rows - only lines that have package data
+                    if ($inTable -and $line.Trim().Length -gt 0) {
+                        # Split by whitespace, filtering empty entries
+                        $parts = $line -split '\s+' | Where-Object { $_.Trim() -ne '' }
+
+                        # Need at least 3 parts: Package, Version, Latest (Type is optional)
+                        # Also verify the first part doesn't start with special characters
+                        if ($parts.Count -ge 3 -and $parts[0] -notmatch '^\[') {
+                            $name = $parts[0]
+                            $currentVer = $parts[1]
+                            $newVer = $parts[2]
+
+                            $availableUpdates += @{
+                                Manager = "pip"
+                                Name = $name
+                                CurrentVersion = $currentVer
+                                NewVersion = $newVer
+                                DisplayText = "[$name] pip: $currentVer -> $newVer"
+                            }
+                        }
+                    }
+                }
+
+                # Filter out packages with strict dependency constraints using pipdeptree
+                Write-Host "  → Checking dependency constraints..." -ForegroundColor Gray
+                try {
+                    $pipdeptreeCmd = Get-Command pipdeptree -ErrorAction SilentlyContinue
+                    if ($pipdeptreeCmd) {
+                        $depTree = pipdeptree --json 2>&1 | ConvertFrom-Json
+
+                        # Build a map of packages that are dependencies with version constraints
+                        $constrainedPackages = @{}
+                        foreach ($pkg in $depTree) {
+                            foreach ($dep in $pkg.dependencies) {
+                                $depName = $dep.package_name.ToLower()
+                                $reqVer = $dep.required_version
+
+                                # Check if there's an upper bound constraint (e.g., <79.0.0)
+                                if ($reqVer -match '<' -or $reqVer -match '==') {
+                                    if (-not $constrainedPackages.ContainsKey($depName)) {
+                                        $constrainedPackages[$depName] = @()
+                                    }
+                                    $constrainedPackages[$depName] += @{
+                                        Parent = $pkg.package.package_name
+                                        Constraint = $reqVer
+                                    }
+                                }
+                            }
+                        }
+
+                        # Filter out constrained packages from available updates
+                        $filteredUpdates = @()
+                        foreach ($update in $availableUpdates) {
+                            if ($update.Manager -eq "pip") {
+                                $pkgNameLower = $update.Name.ToLower()
+                                if ($constrainedPackages.ContainsKey($pkgNameLower)) {
+                                    # Check if the new version would violate constraints
+                                    $constraints = $constrainedPackages[$pkgNameLower]
+                                    $wouldBreak = $false
+
+                                    foreach ($constraint in $constraints) {
+                                        # Simple check: if there's a < constraint, the update might break it
+                                        if ($constraint.Constraint -match '<') {
+                                            Write-Host "    ⚠️  Skipping $($update.Name): constrained by $($constraint.Parent) ($($constraint.Constraint))" -ForegroundColor Yellow
+                                            $wouldBreak = $true
+                                            break
+                                        }
+                                    }
+
+                                    if (-not $wouldBreak) {
+                                        $filteredUpdates += $update
+                                    }
+                                } else {
+                                    $filteredUpdates += $update
+                                }
+                            } else {
+                                $filteredUpdates += $update
+                            }
+                        }
+
+                        # Replace available updates with filtered list
+                        $availableUpdates = $filteredUpdates
+                    } else {
+                        Write-Host "    ℹ️  pipdeptree not found - install with 'pip install pipdeptree' for dependency checking" -ForegroundColor Gray
+                    }
+                } catch {
+                    Write-Host "    ⚠️  Error checking dependencies: $_" -ForegroundColor Yellow
+                }
+            }
+        }
+    } catch {
+        Write-Host "  ⚠️  Error checking pip" -ForegroundColor Red
     }
 
     # Check winget
@@ -864,6 +1119,14 @@ function Select-PackagesToUpdate {
             } elseif ($pkg.Manager -eq "winget") {
                 winget upgrade --id $pkg.Name --accept-package-agreements --accept-source-agreements
                 Write-Host "  ✅ $($pkg.Name) updated successfully" -ForegroundColor Green
+            } elseif ($pkg.Manager -eq "pip") {
+                # pip itself requires special update command
+                if ($pkg.Name -eq "pip") {
+                    python.exe -m pip install --upgrade pip
+                } else {
+                    pip install --upgrade --upgrade-strategy only-if-needed $pkg.Name
+                }
+                Write-Host "  ✅ $($pkg.Name) updated successfully" -ForegroundColor Green
             }
         } catch {
             Write-Host "  ❌ Error updating $($pkg.Name): $_" -ForegroundColor Red
@@ -900,6 +1163,8 @@ function Search-Packages {
 
     # Get list of installed packages for highlighting when searching globally
     $installedScoop = @()
+    $installedNpm = @()
+    $installedPip = @()
     $installedWinget = @()
 
     if (-not $searchInstalled) {
@@ -909,6 +1174,25 @@ function Search-Packages {
             $installedScoop = ($scoopList -split "`n" | Where-Object { $_ -match '\S' } | ForEach-Object {
                 if ($_ -match '^\s*(\S+)') { $matches[1] }
             })
+        } catch { }
+
+        # Get installed npm packages
+        try {
+            $npmList = npm list -g --depth=0 --json 2>&1 | ConvertFrom-Json
+            if ($npmList.dependencies) {
+                $installedNpm = $npmList.dependencies.PSObject.Properties.Name
+            }
+        } catch { }
+
+        # Get installed pip packages
+        try {
+            $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+            if ($pythonCmd) {
+                $pipList = pip list --format=freeze 2>&1 | Out-String
+                $installedPip = ($pipList -split "`n" | Where-Object { $_ -match '\S' } | ForEach-Object {
+                    if ($_ -match '^([^=]+)') { $matches[1] }
+                })
+            }
         } catch { }
 
         # Get installed winget packages
@@ -1013,6 +1297,162 @@ function Search-Packages {
         }
     } catch {
         Write-Host "  ⚠️  Scoop not found or error searching" -ForegroundColor Red
+    }
+
+    # Search npm
+    Write-Host "`n📦 npm results:" -ForegroundColor Yellow
+    Write-Host ""
+    try {
+        if ($searchInstalled) {
+            # Search installed npm packages
+            $npmList = npm list -g --depth=0 2>&1 | Out-String
+            $matchedLines = $npmList -split "`n" | Where-Object { $_ -match $searchTerm }
+
+            if ($matchedLines.Count -eq 0) {
+                Write-Host "  No matches found" -ForegroundColor Gray
+            } else {
+                foreach ($line in $matchedLines) {
+                    Write-Host $line
+                }
+            }
+        } else {
+            # Search globally available npm packages
+            Write-Host "  Searching npm registry for '$searchTerm'..." -ForegroundColor Gray
+            $npmSearch = npm search $searchTerm 2>&1 | Out-String
+
+            if ($npmSearch -match "No matches found" -or [string]::IsNullOrWhiteSpace($npmSearch)) {
+                Write-Host "  No matches found" -ForegroundColor Gray
+            } else {
+                $npmLines = $npmSearch -split "`n"
+                $headerShown = $false
+
+                foreach ($line in $npmLines) {
+                    if ($line.Trim().Length -eq 0) { continue }
+
+                    # Show header line
+                    if ($line -match '^NAME' -or $line -match '^=+') {
+                        Write-Host $line
+                        $headerShown = $true
+                        continue
+                    }
+
+                    # Check if this package is installed
+                    if ($headerShown) {
+                        $isInstalled = $false
+                        # Extract package name (first column)
+                        if ($line -match '^\s*(\S+)') {
+                            $pkgName = $matches[1]
+                            if ($installedNpm -contains $pkgName) {
+                                $isInstalled = $true
+                            }
+                        }
+
+                        if ($isInstalled) {
+                            Write-Host $line -ForegroundColor Green
+                        } else {
+                            Write-Host $line
+                        }
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Host "  ⚠️  npm not found or error searching" -ForegroundColor Red
+    }
+
+    # Search pip
+    Write-Host "`n📦 pip results:" -ForegroundColor Yellow
+    Write-Host ""
+    try {
+        # Check if Python is available
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCmd) {
+            Write-Host "  ⚠️  Python not found" -ForegroundColor Red
+        } else {
+            if ($searchInstalled) {
+                # Search installed pip packages
+                $pipList = pip list 2>&1 | Out-String
+                $pipLines = $pipList -split "`n"
+                $matchedLines = @()
+                $headerLines = @()
+
+                foreach ($line in $pipLines) {
+                    if ($line -match '^Package\s+Version' -or $line -match '^-+\s+-+') {
+                        $headerLines += $line
+                    } elseif ($line -match $searchTerm -and $line.Trim().Length -gt 0) {
+                        $matchedLines += $line
+                    }
+                }
+
+                if ($matchedLines.Count -eq 0) {
+                    Write-Host "  No matches found" -ForegroundColor Gray
+                } else {
+                    # Show header
+                    $headerLines | ForEach-Object { Write-Host $_ }
+                    # Show matches
+                    $matchedLines | Sort-Object | ForEach-Object { Write-Host $_ }
+                }
+            } else {
+                # Search PyPI for available packages
+                Write-Host "  Searching PyPI for '$searchTerm'..." -ForegroundColor Gray
+                $pipSearch = pip search $searchTerm 2>&1 | Out-String
+
+                # Note: pip search has been disabled by PyPI, so we'll use an alternative approach
+                if ($pipSearch -match "disabled" -or $pipSearch -match "XMLRPC request failed") {
+                    Write-Host "  ⚠️  PyPI search is currently disabled. Use https://pypi.org to search." -ForegroundColor Yellow
+                    Write-Host "  Showing installed packages matching '$searchTerm' instead:" -ForegroundColor Gray
+                    Write-Host ""
+
+                    # Fall back to showing installed packages that match
+                    $pipList = pip list 2>&1 | Out-String
+                    $pipLines = $pipList -split "`n"
+                    $matchedLines = @()
+                    $headerLines = @()
+
+                    foreach ($line in $pipLines) {
+                        if ($line -match '^Package\s+Version' -or $line -match '^-+\s+-+') {
+                            $headerLines += $line
+                        } elseif ($line -match $searchTerm -and $line.Trim().Length -gt 0) {
+                            $matchedLines += $line
+                        }
+                    }
+
+                    if ($matchedLines.Count -eq 0) {
+                        Write-Host "  No matches found in installed packages" -ForegroundColor Gray
+                    } else {
+                        # Show header
+                        $headerLines | ForEach-Object { Write-Host $_ }
+                        # Show matches with highlighting
+                        $matchedLines | Sort-Object | ForEach-Object {
+                            Write-Host $_ -ForegroundColor Green
+                        }
+                    }
+                } else {
+                    # If pip search somehow works, parse results
+                    $pipLines = $pipSearch -split "`n"
+                    foreach ($line in $pipLines) {
+                        if ($line.Trim().Length -eq 0) { continue }
+
+                        # Check if package is installed
+                        $isInstalled = $false
+                        if ($line -match '^\s*(\S+)') {
+                            $pkgName = $matches[1]
+                            if ($installedPip -contains $pkgName) {
+                                $isInstalled = $true
+                            }
+                        }
+
+                        if ($isInstalled) {
+                            Write-Host $line -ForegroundColor Green
+                        } else {
+                            Write-Host $line
+                        }
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Host "  ⚠️  pip not found or error searching" -ForegroundColor Red
     }
 
     # Search winget

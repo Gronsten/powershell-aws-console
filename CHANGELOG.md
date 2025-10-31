@@ -4,6 +4,8 @@ All notable changes to this project have been documented during development.
 
 ## Table of Contents
 
+- [Version History](#version-history)
+- [Development Utilities](#development-utilities)
 - [Menu System Enhancements](#menu-system-enhancements)
 - [AWS Account Management](#aws-account-management)
 - [Instance Management](#instance-management)
@@ -13,6 +15,59 @@ All notable changes to this project have been documented during development.
 - [User Experience Improvements](#user-experience-improvements)
 - [Bug Fixes](#bug-fixes)
 - [Code Cleanup](#code-cleanup)
+
+---
+
+## Version History
+
+### v1.1.0 (2025-10-31)
+
+**Backup Dev Environment - Major Enhancement**
+
+Enhanced backup-dev.ps1 with advanced features and improved user experience:
+
+**New Features:**
+- GNU-style command-line arguments with full help system (`--help`, `--test-mode`, `--list-only`, `--count`)
+- Test mode with configurable operation limits (default 100, minimum 100)
+- List-only mode for dry-run previews without file modifications
+- Count-only mode for quick file/directory statistics
+- Two-pass operation: Pass 1 counts files, Pass 2 performs backup with accurate progress
+- Visual progress indicators with animated spinner and percentage-based progress bar
+- Real-time statistics display (directories, files, copied, extra)
+- Dual logging system: detailed operation log + rotating summary history
+- Smart log rotation (automatically keeps last 7 backup summaries)
+- Runtime statistics and formatted completion reporting
+
+**Improvements:**
+- Removed OneDrive shutdown/restart functionality (no longer needed)
+- Cleaned up unused variables for better code quality
+- Added helper function `Write-Separator` for consistent visual formatting
+- Enhanced robocopy integration with intelligent retry logic (/R:3 /W:5)
+- Background job processing for responsive progress updates
+- Improved error handling and graceful exits
+
+**User Experience:**
+- Progress updates every 500ms with spinner animation
+- Clear mode indicators (TEST MODE, LIST-ONLY MODE, COUNT MODE)
+- Comprehensive command-line help with usage examples
+- Formatted output with color-coded messages (Cyan/Yellow/Green)
+- Human-readable runtime display (mm:ss format)
+
+**Configuration:**
+- Paths configured via config.json (backupSource, backupDestination)
+- Log files stored in script directory (backup-dev.log, backup-history.log)
+
+### v1.0.0 (Initial Release)
+
+Initial release with comprehensive AWS management console functionality.
+
+---
+
+## Development Utilities
+
+### Backup Dev Environment Enhancements (v1.1.0)
+
+See [Version History](#version-history) above for complete details of backup-dev.ps1 enhancements.
 
 ---
 

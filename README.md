@@ -50,10 +50,16 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
   - CLI support for flexible usage
   - Handles multiple encodings and file types
   - Project-aware exclusions (logs, backups, node_modules, etc.)
-- **Backup Dev Environment**: Automated development environment backup utility
-  - Uses robocopy for efficient mirroring
-  - Creates timestamped backups to configured destination
-  - Interactive confirmation before execution
+- **Backup Dev Environment**: Advanced development environment backup utility
+  - Two-pass operation with file counting and progress tracking
+  - Multiple operation modes (test, list-only, count-only, full backup)
+  - GNU-style command-line arguments with comprehensive help
+  - Visual progress indicators with spinner and percentage display
+  - Uses robocopy for efficient mirroring with intelligent retry logic
+  - Dual logging system (detailed log + rotating summary history)
+  - Smart log rotation (keeps last 7 backup summaries)
+  - Configurable paths via config.json
+  - Runtime statistics and completion reporting
 - **Meraki Backup**: Automated Meraki network configuration backup
   - Python-based backup script integration
   - Environment variable validation
@@ -148,6 +154,37 @@ See [SETUP.md](SETUP.md) for detailed configuration instructions.
 2. Choose "Manage Updates" to see all available updates
 3. Use arrow keys and spacebar to select packages
 4. Press Enter to install selected updates
+
+### Backup Dev Environment Workflow
+
+The backup-dev.ps1 script can be run directly from PowerShell with various options:
+
+```powershell
+# Full backup (with confirmation)
+.\backup-dev.ps1
+
+# Test mode - preview first 100 operations
+.\backup-dev.ps1 --test-mode
+
+# Test mode with custom limit (250+ operations)
+.\backup-dev.ps1 --test-mode 500
+
+# List-only mode - preview all changes without executing
+.\backup-dev.ps1 --list-only
+
+# Count-only mode - just count files and directories
+.\backup-dev.ps1 --count
+
+# Help - show all available options
+.\backup-dev.ps1 --help
+```
+
+**Features:**
+- **Two-pass operation**: First pass counts files, second pass performs backup with accurate progress
+- **Visual progress**: Real-time progress bar with percentage, spinner, and statistics
+- **Smart logging**: Detailed operation log + rotating summary history (keeps last 7)
+- **Safe testing**: Test and list-only modes let you preview before executing
+- **Efficient mirroring**: Uses robocopy with /MIR flag for true synchronization
 
 ### Menu Customization
 

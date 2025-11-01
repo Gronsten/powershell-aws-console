@@ -12,8 +12,12 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
     rel_path = file_path.relative_to(base_path)
     parts = rel_path.parts
 
-    # Exclude log files everywhere
+    # Global exclusions
     if 'log' in str(file_path).lower() or file_path.suffix == '.log':
+        return True
+
+    # Exclude .vsix files everywhere
+    if file_path.suffix == '.vsix':
         return True
 
     # Determine the project name from the dev root perspective
@@ -62,14 +66,14 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
                 file_path.name == 'vpn_config_output.xlsx'):
                 return True
 
+        # defender: exclude .csv files
+        elif project == 'defender':
+            if file_path.suffix == '.csv':
+                return True
+
         # powershell-aws-console: exclude files with 'backup' in name
         elif project == 'powershell-aws-console':
             if 'backup' in file_path.name.lower():
-                return True
-
-        # vscode-extensions: exclude .vsix files
-        elif project == 'vscode-extensions':
-            if file_path.suffix == '.vsix':
                 return True
 
     return False

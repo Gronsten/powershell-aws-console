@@ -20,6 +20,17 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.1 (2025-11-01)
+
+**Code Line Counter - Exclusion Rule Updates**
+
+Updated exclusion rules in count-lines.py for better file filtering:
+
+**Changes:**
+- Moved `.vsix` exclusion from vscode-extensions project to global exclusions
+- Added `.csv` exclusion for defender project
+- Improved code organization with clearer section comments for global exclusions
+
 ### v1.2.0 (2025-11-01)
 
 **Backup Dev Environment - Submenu and Improvements**

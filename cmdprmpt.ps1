@@ -2442,25 +2442,109 @@ function Start-CodeCount {
     pause
 }
 
-function Start-BackupDevEnvironment {
-    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  BACKUP DEVELOPMENT ENVIRONMENT            ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
+# Helper function to get backup script path
+function Get-BackupScriptPath {
     $workingDir = $script:Config.paths.workingDirectory
     $backupScriptPath = Join-Path $workingDir "backup-dev.ps1"
 
-    # Check if backup-dev.ps1 exists
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
         pause
-        return
+        return $null
     }
 
-    Write-Host "This will create a timestamped backup of your development environment." -ForegroundColor Yellow
+    return $backupScriptPath
+}
+
+# Helper function to execute backup with parameters
+function Invoke-BackupScript {
+    param(
+        [string[]]$Arguments = @(),
+        [string]$Description = "backup"
+    )
+
+    $backupScriptPath = Get-BackupScriptPath
+    if (-not $backupScriptPath) { return }
+
+    Write-Host ""
+    if ($Arguments.Count -gt 0) {
+        Write-Host "Executing: $backupScriptPath $($Arguments -join ' ')" -ForegroundColor Gray
+    } else {
+        Write-Host "Executing: $backupScriptPath" -ForegroundColor Gray
+    }
     Write-Host ""
 
-    $confirm = Read-Host "Continue with backup? (Y/n)"
+    try {
+        if ($Arguments.Count -gt 0) {
+            & $backupScriptPath @Arguments
+        } else {
+            & $backupScriptPath
+        }
+        Write-Host ""
+        Write-Host "✅ $Description completed successfully!" -ForegroundColor Green
+    }
+    catch {
+        Write-Host ""
+        Write-Host "❌ Error during $Description : $($_.Exception.Message)" -ForegroundColor Red
+    }
+
+    Write-Host ""
+    pause
+}
+
+function Start-BackupListOnly {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  BACKUP - LIST-ONLY MODE                   ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    Write-Host "This will preview all changes without modifying any files." -ForegroundColor Yellow
+    Write-Host ""
+
+    Invoke-BackupScript -Arguments @("--list-only") -Description "List-only scan"
+}
+
+function Start-BackupTestMode {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  BACKUP - TEST MODE                        ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    Write-Host "Test mode will preview a limited number of operations." -ForegroundColor Yellow
+    Write-Host "Minimum limit: 100 items (default if not specified)" -ForegroundColor Gray
+    Write-Host ""
+
+    $limit = Read-Host "Enter test limit (press Enter for default 100)"
+
+    if ([string]::IsNullOrWhiteSpace($limit)) {
+        Invoke-BackupScript -Arguments @("--test-mode") -Description "Test mode"
+    } else {
+        Invoke-BackupScript -Arguments @("--test-mode", $limit) -Description "Test mode"
+    }
+}
+
+function Start-BackupCountMode {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  BACKUP - COUNT MODE                       ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    Write-Host "This will count all files and directories, then exit." -ForegroundColor Yellow
+    Write-Host ""
+
+    Invoke-BackupScript -Arguments @("--count") -Description "Count"
+}
+
+function Start-BackupDevEnvironment {
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  BACKUP - FULL BACKUP                      ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    $backupScriptPath = Get-BackupScriptPath
+    if (-not $backupScriptPath) { return }
+
+    Write-Host "This will create a full backup of your development environment." -ForegroundColor Yellow
+    Write-Host "⚠️  WARNING: This will copy and sync all files!" -ForegroundColor Red
+    Write-Host ""
+
+    $confirm = Read-Host "Continue with full backup? (Y/n)"
 
     if ($confirm.ToLower() -eq "n") {
         Write-Host "Backup cancelled." -ForegroundColor Yellow
@@ -2468,22 +2552,42 @@ function Start-BackupDevEnvironment {
         return
     }
 
-    Write-Host ""
-    Write-Host "Executing: $backupScriptPath" -ForegroundColor Gray
-    Write-Host ""
+    Invoke-BackupScript -Description "Full backup"
+}
 
-    try {
-        & $backupScriptPath
-        Write-Host ""
-        Write-Host "✅ Backup completed successfully!" -ForegroundColor Green
-    }
-    catch {
-        Write-Host ""
-        Write-Host "❌ Error during backup: $($_.Exception.Message)" -ForegroundColor Red
-    }
+function Show-BackupDevMenu {
+    # Define backup submenu
+    $defaultMenu = @(
+        (New-MenuAction "List-Only Mode (Preview)" {
+            Start-BackupListOnly
+        }),
+        (New-MenuAction "Test Mode (Limited Preview)" {
+            Start-BackupTestMode
+        }),
+        (New-MenuAction "Count Mode (Quantify Source)" {
+            Start-BackupCountMode
+        }),
+        (New-MenuAction "Full Backup" {
+            Start-BackupDevEnvironment
+        })
+    )
 
-    Write-Host ""
-    pause
+    # Load menu from config (or use default if not customized)
+    $backupMenuItems = Get-MenuFromConfig -MenuTitle "Backup Dev Environment" -DefaultMenuItems $defaultMenu
+
+    do {
+        $choice = Show-ArrowMenu -MenuItems $backupMenuItems -Title "Backup Dev Environment"
+
+        if ($choice -eq -1) {
+            Write-Host "Returning to Main Menu..." -ForegroundColor Cyan
+            return
+        }
+
+        # Execute the selected action
+        $selectedAction = $backupMenuItems[$choice]
+        & $selectedAction.Action
+
+    } while ($true)
 }
 
 function Show-MainMenu {
@@ -2525,7 +2629,7 @@ function Show-MainMenu {
             Start-CodeCount
         }),
         (New-MenuAction "Backup Dev Environment" {
-            Start-BackupDevEnvironment
+            Show-BackupDevMenu
         }),
         (New-MenuAction "Package Manager" {
             Show-PackageManagerMenu

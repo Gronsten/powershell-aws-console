@@ -20,6 +20,33 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.0 (2025-11-01)
+
+**Backup Dev Environment - Submenu and Improvements**
+
+Added interactive submenu for backup operations with multiple modes and fixed test mode functionality:
+
+**New Features:**
+- Added backup submenu with four modes accessible from main menu:
+  - List-Only Mode (Preview): Preview all changes without modifying files
+  - Test Mode (Limited Preview): Preview limited operations with user-specified limit
+  - Count Mode (Quantify Source): Count all files and directories, then exit
+  - Full Backup: Create full backup with confirmation warning
+- Interactive test mode now prompts for operation limit (default: 100)
+- Improved user experience with safer preview options before destructive operations
+
+**Bug Fixes:**
+- Fixed Test Mode argument parsing that prevented it from working
+- Refactored `Invoke-BackupScript` to accept string array instead of string
+- Updated argument passing to use PowerShell splatting (`@Arguments`)
+- Test mode now correctly passes `--test-mode` and limit as separate arguments
+
+**Code Improvements:**
+- Added `Get-BackupScriptPath` helper function for DRY principle
+- Added `Invoke-BackupScript` helper function to centralize backup execution logic
+- Created separate functions for each backup mode for better maintainability
+- Improved error handling and user feedback
+
 ### v1.1.0 (2025-10-31)
 
 **Backup Dev Environment - Major Enhancement**

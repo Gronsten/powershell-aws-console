@@ -1168,12 +1168,23 @@ function Search-Packages {
     $installedWinget = @()
 
     if (-not $searchInstalled) {
-        # Get installed Scoop packages
+        Write-Host "  Loading installed packages for highlighting..." -ForegroundColor Gray -NoNewline
+
+        # Get installed Scoop packages using JSON export (silent)
         try {
-            $scoopList = scoop list 2>&1 | Out-String
-            $installedScoop = ($scoopList -split "`n" | Where-Object { $_ -match '\S' } | ForEach-Object {
-                if ($_ -match '^\s*(\S+)') { $matches[1] }
-            })
+            # Use scoop export which outputs JSON without console headers
+            $scoopExportJson = scoop export 2>&1 | Out-String | ConvertFrom-Json
+            $installedScoop = @()
+
+            # Extract package names from JSON
+            if ($scoopExportJson.apps) {
+                foreach ($app in $scoopExportJson.apps) {
+                    if ($app.Name) {
+                        $installedScoop += $app.Name
+                    }
+                }
+            }
+            Write-Host " Scoop ✓" -ForegroundColor Green -NoNewline
         } catch { }
 
         # Get installed npm packages
@@ -1182,6 +1193,7 @@ function Search-Packages {
             if ($npmList.dependencies) {
                 $installedNpm = $npmList.dependencies.PSObject.Properties.Name
             }
+            Write-Host " npm ✓" -ForegroundColor Green -NoNewline
         } catch { }
 
         # Get installed pip packages
@@ -1193,6 +1205,7 @@ function Search-Packages {
                     if ($_ -match '^([^=]+)') { $matches[1] }
                 })
             }
+            Write-Host " pip ✓" -ForegroundColor Green -NoNewline
         } catch { }
 
         # Get installed winget packages
@@ -1213,7 +1226,9 @@ function Search-Packages {
                     }
                 }
             }
+            Write-Host " winget ✓" -ForegroundColor Green
         } catch { }
+        Write-Host ""
     }
 
     # Search Scoop
@@ -1393,61 +1408,126 @@ function Search-Packages {
                     $matchedLines | Sort-Object | ForEach-Object { Write-Host $_ }
                 }
             } else {
-                # Search PyPI for available packages
+                # Use PyPI JSON API to search (pip search was disabled in 2021)
                 Write-Host "  Searching PyPI for '$searchTerm'..." -ForegroundColor Gray
-                $pipSearch = pip search $searchTerm 2>&1 | Out-String
-
-                # Note: pip search has been disabled by PyPI, so we'll use an alternative approach
-                if ($pipSearch -match "disabled" -or $pipSearch -match "XMLRPC request failed") {
-                    Write-Host "  ⚠️  PyPI search is currently disabled. Use https://pypi.org to search." -ForegroundColor Yellow
-                    Write-Host "  Showing installed packages matching '$searchTerm' instead:" -ForegroundColor Gray
+                try {
+                    # Use PyPI's simple search via web scraping alternative
+                    $searchUrl = "https://pypi.org/search/?q=$searchTerm"
+                    Write-Host "  Note: Using web search. For more results visit: $searchUrl" -ForegroundColor Cyan
                     Write-Host ""
 
-                    # Fall back to showing installed packages that match
-                    $pipList = pip list 2>&1 | Out-String
-                    $pipLines = $pipList -split "`n"
-                    $matchedLines = @()
-                    $headerLines = @()
+                    # Try to get exact package info if searchTerm looks like a package name
+                    if ($searchTerm -match '^[a-zA-Z0-9_-]+$') {
+                        $foundExact = $false
+                        try {
+                            $response = Invoke-RestMethod -Uri "https://pypi.org/pypi/$searchTerm/json" -ErrorAction SilentlyContinue -TimeoutSec 5
+                            if ($response) {
+                                $foundExact = $true
+                                $pkgInfo = $response.info
+                                $isInstalled = pip list 2>&1 | Select-String -Pattern "^$searchTerm\s" -Quiet
 
-                    foreach ($line in $pipLines) {
-                        if ($line -match '^Package\s+Version' -or $line -match '^-+\s+-+') {
-                            $headerLines += $line
-                        } elseif ($line -match $searchTerm -and $line.Trim().Length -gt 0) {
-                            $matchedLines += $line
-                        }
-                    }
+                                $installStatus = if ($isInstalled) { " [INSTALLED]" } else { "" }
+                                $color = if ($isInstalled) { "Green" } else { "White" }
 
-                    if ($matchedLines.Count -eq 0) {
-                        Write-Host "  No matches found in installed packages" -ForegroundColor Gray
-                    } else {
-                        # Show header
-                        $headerLines | ForEach-Object { Write-Host $_ }
-                        # Show matches with highlighting
-                        $matchedLines | Sort-Object | ForEach-Object {
-                            Write-Host $_ -ForegroundColor Green
-                        }
-                    }
-                } else {
-                    # If pip search somehow works, parse results
-                    $pipLines = $pipSearch -split "`n"
-                    foreach ($line in $pipLines) {
-                        if ($line.Trim().Length -eq 0) { continue }
+                                Write-Host "  Package: $($pkgInfo.name)$installStatus" -ForegroundColor $color
+                                Write-Host "  Version: $($pkgInfo.version)" -ForegroundColor Gray
+                                Write-Host "  Summary: $($pkgInfo.summary)" -ForegroundColor Gray
+                                if ($pkgInfo.home_page) {
+                                    Write-Host "  Homepage: $($pkgInfo.home_page)" -ForegroundColor Gray
+                                }
+                                Write-Host ""
+                            }
+                        } catch {
+                            # Exact package not found, try common variations
+                            $variations = @("py$searchTerm", "${searchTerm}svg", "python-$searchTerm")
+                            foreach ($variant in $variations) {
+                                try {
+                                    $response = Invoke-RestMethod -Uri "https://pypi.org/pypi/$variant/json" -ErrorAction SilentlyContinue -TimeoutSec 3
+                                    if ($response) {
+                                        $foundExact = $true
+                                        $pkgInfo = $response.info
+                                        $isInstalled = pip list 2>&1 | Select-String -Pattern "^$variant\s" -Quiet
 
-                        # Check if package is installed
-                        $isInstalled = $false
-                        if ($line -match '^\s*(\S+)') {
-                            $pkgName = $matches[1]
-                            if ($installedPip -contains $pkgName) {
-                                $isInstalled = $true
+                                        $installStatus = if ($isInstalled) { " [INSTALLED]" } else { "" }
+                                        $color = if ($isInstalled) { "Green" } else { "White" }
+
+                                        Write-Host "  Found similar package:" -ForegroundColor Cyan
+                                        Write-Host "  Package: $($pkgInfo.name)$installStatus" -ForegroundColor $color
+                                        Write-Host "  Version: $($pkgInfo.version)" -ForegroundColor Gray
+                                        Write-Host "  Summary: $($pkgInfo.summary)" -ForegroundColor Gray
+                                        if ($pkgInfo.home_page) {
+                                            Write-Host "  Homepage: $($pkgInfo.home_page)" -ForegroundColor Gray
+                                        }
+                                        Write-Host ""
+                                    }
+                                } catch {
+                                    # Continue to next variation
+                                }
                             }
                         }
 
-                        if ($isInstalled) {
-                            Write-Host $line -ForegroundColor Green
+                        if (-not $foundExact) {
+                            # No exact match or variations found
+                            Write-Host "  No exact match for '$searchTerm' on PyPI." -ForegroundColor Yellow
+                            Write-Host "  💡 Try: 'py$searchTerm' or '${searchTerm}svg' or search on PyPI web" -ForegroundColor Cyan
+                            Write-Host ""
+                            Write-Host "  Showing installed packages matching '$searchTerm':" -ForegroundColor Gray
+                            Write-Host ""
+
+                            $pipList = pip list 2>&1 | Out-String
+                            $pipLines = $pipList -split "`n"
+                            $matchedLines = @()
+                            $headerLines = @()
+
+                            foreach ($line in $pipLines) {
+                                if ($line -match '^Package\s+Version' -or $line -match '^-+\s+-+') {
+                                    $headerLines += $line
+                                } elseif ($line -match $searchTerm -and $line.Trim().Length -gt 0 -and $line -notmatch '^\[notice\]') {
+                                    $matchedLines += $line
+                                }
+                            }
+
+                            if ($matchedLines.Count -eq 0) {
+                                Write-Host "  No matches found in installed packages" -ForegroundColor Gray
+                                Write-Host "  💡 Try searching on PyPI: $searchUrl" -ForegroundColor Cyan
+                            } else {
+                                $headerLines | ForEach-Object { Write-Host $_ }
+                                $matchedLines | Sort-Object | ForEach-Object {
+                                    Write-Host $_ -ForegroundColor Green
+                                }
+                            }
+                        }
+                    } else {
+                        # For non-exact searches, just show the web link and installed matches
+                        Write-Host "  For multiple results, visit: $searchUrl" -ForegroundColor Cyan
+                        Write-Host ""
+                        Write-Host "  Showing installed packages matching '$searchTerm':" -ForegroundColor Gray
+                        Write-Host ""
+
+                        $pipList = pip list 2>&1 | Out-String
+                        $pipLines = $pipList -split "`n"
+                        $matchedLines = @()
+                        $headerLines = @()
+
+                        foreach ($line in $pipLines) {
+                            if ($line -match '^Package\s+Version' -or $line -match '^-+\s+-+') {
+                                $headerLines += $line
+                            } elseif ($line -match $searchTerm -and $line.Trim().Length -gt 0 -and $line -notmatch '^\[notice\]') {
+                                $matchedLines += $line
+                            }
+                        }
+
+                        if ($matchedLines.Count -eq 0) {
+                            Write-Host "  No matches found in installed packages" -ForegroundColor Gray
                         } else {
-                            Write-Host $line
+                            $headerLines | ForEach-Object { Write-Host $_ }
+                            $matchedLines | Sort-Object | ForEach-Object {
+                                Write-Host $_ -ForegroundColor Green
+                            }
                         }
                     }
+                } catch {
+                    Write-Host "  ⚠️  Error searching PyPI. Visit https://pypi.org/search/?q=$searchTerm" -ForegroundColor Yellow
                 }
             }
         }

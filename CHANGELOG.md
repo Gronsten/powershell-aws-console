@@ -20,6 +20,28 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.2 (2025-11-04)
+
+**Package Manager - Enhanced PyPI Search & UX Improvements**
+
+Significantly improved package search functionality with PyPI JSON API integration and better user feedback.
+
+**Changes:**
+- **PyPI JSON API Integration**: Replaced disabled `pip search` with PyPI's JSON API for accurate package information
+- **Smart Package Discovery**: Automatically tries common variations (e.g., searching "cairo" finds "pycairo", "cairosvg", "python-cairo")
+- **Package Details Display**: Shows package name, version, summary, and homepage from PyPI
+- **Installation Status Indicators**: Displays [INSTALLED] tag in green for already-installed packages
+- **Fixed Display Issue**: Removed spurious "Installed apps:" header from global search results
+- **Progress Indicators**: Added "Loading installed packages... Scoop ✓ npm ✓ pip ✓ winget ✓" feedback during initialization
+- **Performance Optimization**: Changed from `scoop list` to `scoop export` (JSON format, cleaner output)
+- **Improved Messaging**: Clear explanations for PyPI search limitations and helpful suggestions
+
+**Technical Details:**
+- Uses `Invoke-RestMethod` to query `https://pypi.org/pypi/<package>/json` API endpoint
+- Tries exact match first, then common naming variations for Python packages
+- Properly handles API errors and provides fallback to installed package search
+- ~100 lines modified in `cmdprmpt.ps1`
+
 ### v1.2.1 (2025-11-01)
 
 **Code Line Counter - Exclusion Rule Updates**

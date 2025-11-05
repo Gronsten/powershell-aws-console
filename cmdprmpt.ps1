@@ -2461,11 +2461,12 @@ function Start-MerakiBackup {
                 Write-Host "Warning: .env file not found. Make sure MERAKI_API_KEY is set in environment." -ForegroundColor Yellow
             }
 
-            Write-Host "Executing: python backup.py" -ForegroundColor Cyan
+            Write-Host "Executing: python backup.py -i" -ForegroundColor Cyan
             Write-Host ""
 
-            # Run the backup script
-            python backup.py
+            # Run the backup script in interactive mode
+            # -i flag allows user to select specific orgs/networks instead of backing up everything
+            python backup.py -i
 
             Write-Host ""
             Write-Host "Meraki backup completed." -ForegroundColor Green

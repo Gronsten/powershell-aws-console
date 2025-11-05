@@ -2503,7 +2503,9 @@ function Start-CodeCount {
     }
 
     # Initialize navigation state
-    $devRoot = Split-Path $workingDir -Parent
+    # $PSScriptRoot is the script directory (e.g., C:\AppInstall\dev\powershell-console)
+    # $devRoot is the parent directory (e.g., C:\AppInstall\dev)
+    $devRoot = Split-Path $PSScriptRoot -Parent
     $currentPath = $devRoot
     $pathStack = @()
     $selections = @{}  # Track selections by full path

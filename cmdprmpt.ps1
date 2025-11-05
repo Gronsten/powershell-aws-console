@@ -1408,19 +1408,52 @@ function Search-Packages {
                         if ($currentBatch.Count -eq 0) { break }
 
                         # Print table header
-                        Write-Host "  NAME              VERSION   DESCRIPTION" -ForegroundColor Cyan
-                        Write-Host "  ================  ========  ========================================" -ForegroundColor DarkGray
+                        Write-Host "  NAME              VERSION         DESCRIPTION" -ForegroundColor Cyan
+                        Write-Host "  ================  ==============  ========================================" -ForegroundColor DarkGray
 
-                        # Fetch and display packages in current batch (table format)
+                        # Fetch package metadata in parallel for better performance
+                        $jobs = @()
                         foreach ($pkgName in $currentBatch) {
-                            try {
-                                # Direct lookup for package metadata
-                                $pkgUrl = "https://registry.npmjs.org/$pkgName"
-                                $pkgData = Invoke-RestMethod -Uri $pkgUrl -Method Get -ErrorAction Stop -TimeoutSec 2
+                            $jobs += Start-Job -ScriptBlock {
+                                param($name, $url)
+                                try {
+                                    $data = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -TimeoutSec 3
+                                    return @{
+                                        name = $name
+                                        version = $data.'dist-tags'.latest
+                                        description = $data.description
+                                        success = $true
+                                    }
+                                } catch {
+                                    return @{
+                                        name = $name
+                                        success = $false
+                                    }
+                                }
+                            } -ArgumentList $pkgName, "https://registry.npmjs.org/$pkgName"
+                        }
 
-                                $isInstalled = $installedNpm -contains $pkgName
-                                $version = $pkgData.'dist-tags'.latest
-                                $description = if ($pkgData.description) { $pkgData.description } else { "" }
+                        # Wait for all jobs to complete (with timeout)
+                        $null = Wait-Job -Job $jobs -Timeout 10
+
+                        # Collect and display results
+                        $results = @{}
+                        foreach ($job in $jobs) {
+                            $result = Receive-Job -Job $job
+                            if ($result) {
+                                $results[$result.name] = $result
+                            }
+                            Remove-Job -Job $job -Force
+                        }
+
+                        # Display packages in original order
+                        foreach ($pkgName in $currentBatch) {
+                            $result = $results[$pkgName]
+                            $isInstalled = $installedNpm -contains $pkgName
+
+                            if ($result -and $result.success) {
+                                $version = $result.version
+                                $description = if ($result.description) { $result.description } else { "" }
 
                                 # Truncate description to fit in table (60 chars max)
                                 if ($description.Length -gt 60) {
@@ -1430,9 +1463,9 @@ function Search-Packages {
                                 # Format name with [I] indicator if installed
                                 $nameDisplay = if ($isInstalled) { "$pkgName [I]" } else { $pkgName }
 
-                                # Pad columns for alignment
+                                # Pad columns for alignment (NAME: 16, VERSION: 14, DESC: 60)
                                 $namePadded = $nameDisplay.PadRight(16)
-                                $versionPadded = $version.PadRight(8)
+                                $versionPadded = $version.PadRight(14)
 
                                 # Color installed packages green
                                 if ($isInstalled) {
@@ -1440,11 +1473,10 @@ function Search-Packages {
                                 } else {
                                     Write-Host "  $namePadded  $versionPadded  $description"
                                 }
-                            }
-                            catch {
-                                # Failed to fetch metadata, show package name only
+                            } else {
+                                # Failed to fetch metadata
                                 $namePadded = $pkgName.PadRight(16)
-                                Write-Host "  $namePadded  (error)   Unable to fetch package details" -ForegroundColor DarkGray
+                                Write-Host "  $namePadded  (error)         Unable to fetch package details" -ForegroundColor DarkGray
                             }
                         }
                         Write-Host ""

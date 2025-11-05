@@ -2432,8 +2432,10 @@ function Start-MerakiBackup {
     Write-Host "Starting Meraki Backup..." -ForegroundColor Green
     Write-Host ""
 
-    # Check if we're in the right directory or if meraki-api folder exists
-    $merakiPath = Join-Path $script:Config.paths.workingDirectory "meraki-api"
+    # Check if meraki-api folder exists in parent directory (C:\AppInstall\dev\meraki-api)
+    # meraki-api is a separate project at the same level as powershell-console
+    $devRoot = Split-Path $PSScriptRoot -Parent
+    $merakiPath = Join-Path $devRoot "meraki-api"
 
     if (Test-Path $merakiPath) {
         try {
@@ -2459,11 +2461,12 @@ function Start-MerakiBackup {
                 Write-Host "Warning: .env file not found. Make sure MERAKI_API_KEY is set in environment." -ForegroundColor Yellow
             }
 
-            Write-Host "Executing: python backup.py" -ForegroundColor Cyan
+            Write-Host "Executing: python backup.py -i" -ForegroundColor Cyan
             Write-Host ""
 
-            # Run the backup script
-            python backup.py
+            # Run the backup script in interactive mode
+            # -i flag allows user to select specific orgs/networks instead of backing up everything
+            python backup.py -i
 
             Write-Host ""
             Write-Host "Meraki backup completed." -ForegroundColor Green
@@ -2477,15 +2480,15 @@ function Start-MerakiBackup {
     }
     else {
         Write-Host "Meraki API directory not found at: $merakiPath" -ForegroundColor Red
-        Write-Host "Please ensure the meraki-api folder exists in the working directory." -ForegroundColor Yellow
+        Write-Host "Please ensure the meraki-api folder exists in the dev directory (same level as powershell-console)." -ForegroundColor Yellow
     }
 
     pause
 }
 
 function Start-CodeCount {
-    $workingDir = $script:Config.paths.workingDirectory
-    $countScriptPath = Join-Path $workingDir "count-lines.py"
+    # Use $PSScriptRoot to get the actual script directory
+    $countScriptPath = Join-Path $PSScriptRoot "count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
@@ -2503,7 +2506,9 @@ function Start-CodeCount {
     }
 
     # Initialize navigation state
-    $devRoot = Split-Path $workingDir -Parent
+    # $PSScriptRoot is the script directory (e.g., C:\AppInstall\dev\powershell-console)
+    # $devRoot is the parent directory (e.g., C:\AppInstall\dev)
+    $devRoot = Split-Path $PSScriptRoot -Parent
     $currentPath = $devRoot
     $pathStack = @()
     $selections = @{}  # Track selections by full path
@@ -2731,8 +2736,8 @@ function Start-CodeCount {
 
 # Helper function to get backup script path
 function Get-BackupScriptPath {
-    $workingDir = $script:Config.paths.workingDirectory
-    $backupScriptPath = Join-Path $workingDir "backup-dev.ps1"
+    # Use $PSScriptRoot to get the actual script directory (handles project renames automatically)
+    $backupScriptPath = Join-Path $PSScriptRoot "backup-dev.ps1"
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
@@ -3975,7 +3980,7 @@ function Show-AwsAccountMenu {
 
 function Start-CommandPrompt {
     Write-Host "Dropping to command prompt. Type 'exit' to return." -ForegroundColor Yellow
-    Invoke-Expression "pwsh -noe -wd '$($script:Config.paths.workingDirectory)'"
+    Invoke-Expression "pwsh -noe -wd '$PSScriptRoot'"
 }
 
 function Get-CurrentInstanceId {

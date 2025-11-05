@@ -71,9 +71,10 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
             if file_path.suffix == '.csv':
                 return True
 
-        # powershell-aws-console: exclude files with 'backup' in name
-        elif project == 'powershell-aws-console':
-            if 'backup' in file_path.name.lower():
+        # powershell-console: exclude files with 'backup' in name
+        elif project == 'powershell-console':
+            if (file_path.name == 'npm-packages.json' or
+                'backup' in file_path.name.lower()):
                 return True
 
     return False

@@ -246,15 +246,20 @@ if (Test-Path $countLog) {
         # The scanning progress used -NoNewline, so output a newline
         Write-Host ""
         # Parse the summary section for accurate counts
-        # Look for patterns like "Dirs : 1234" in the Total row
+        # Robocopy summary format: Total Copied Skipped Mismatch FAIL EXTRAS
+        # We want Copied + EXTRAS as these are the operations that will occur in Pass 2
         if ($logContent -match '(?m)^\s+Dirs\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
-            # First number after "Dirs :" in Total row is total dirs
-            $script:totalDirs = [int]$matches[1]
+            # Dirs: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $dirsCopied = [int]$matches[2]
+            $dirsExtras = [int]$matches[6]
+            $script:totalDirs = $dirsCopied + $dirsExtras
         }
 
         if ($logContent -match '(?m)^\s+Files\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
-            # First number after "Files :" in Total row is total files
-            $script:totalFiles = [int]$matches[1]
+            # Files: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $filesCopied = [int]$matches[2]
+            $filesExtras = [int]$matches[6]
+            $script:totalFiles = $filesCopied + $filesExtras
         }
     }
 

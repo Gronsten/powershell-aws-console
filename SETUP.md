@@ -67,10 +67,10 @@ This guide will walk you through setting up the PowerShell AWS Management Consol
 cd "C:\Users\YourUsername\Documents"
 
 # Clone the repository
-git clone https://github.com/yourusername/powershell-aws-console.git
+git clone https://github.com/yourusername/powershell-console.git
 
 # Navigate into the directory
-cd powershell-aws-console
+cd powershell-console
 ```
 
 ### 2. Create Configuration File
@@ -113,7 +113,7 @@ Update the `paths` section:
 ```json
 {
   "paths": {
-    "workingDirectory": "C:\\Users\\YourUsername\\Documents\\powershell-aws-console",
+    "workingDirectory": "C:\\Users\\YourUsername\\Documents\\powershell-console",
     "profilePath": "C:\\Users\\YourUsername\\Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1",
     "oktaYamlPath": "C:\\Users\\YourUsername\\.okta\\okta.yaml",
     "rdcManagerPath": "C:\\path\\to\\RDCMan.exe",
@@ -525,7 +525,7 @@ After setup is complete:
    ```powershell
    # Add to your PowerShell profile
    function Start-AWSConsole {
-       & "C:\path\to\powershell-aws-console\cmdprmpt.ps1"
+       & "C:\path\to\powershell-console\cmdprmpt.ps1"
    }
    Set-Alias awsc Start-AWSConsole
    ```

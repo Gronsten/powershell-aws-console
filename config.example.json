@@ -1,6 +1,6 @@
 {
   "paths": {
-    "workingDirectory": "C:\\path\\to\\powershell-aws-console",
+    "workingDirectory": "C:\\path\\to\\powershell-console",
     "profilePath": "C:\\Users\\YourUsername\\Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1",
     "oktaYamlPath": "C:\\Users\\YourUsername\\.okta\\okta.yaml",
     "rdcManagerPath": "C:\\path\\to\\RDCMan.exe",

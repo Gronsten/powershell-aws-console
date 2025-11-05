@@ -20,6 +20,54 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.3 (2025-11-05)
+
+**Project Rename & Bug Fixes**
+
+**BREAKING CHANGE:** Project renamed from `powershell-aws-console` to `powershell-console` to better reflect its expanded functionality beyond AWS management (package managers, backups, utilities, etc.).
+
+**Migration Notes:**
+- GitHub repository: `Gronsten/powershell-aws-console` → `Gronsten/powershell-console` (old URLs automatically redirect)
+- Local directory: Update your clone path from `powershell-aws-console` to `powershell-console`
+- Git remote: Run `git remote set-url origin https://github.com/Gronsten/powershell-console.git`
+- All internal functionality remains unchanged - no code changes required
+
+**Bug Fixes - Package Search & Backup Progress**
+
+Fixed two critical issues affecting package search and backup progress tracking.
+
+**Changes:**
+- **npm Package Name Search**: Replaced slow `npm search` command with local package database
+  - **Complete Package Database**: Uses local copy of all 3.6M+ npm package names from [nice-registry/all-the-package-names](https://github.com/nice-registry/all-the-package-names)
+  - **Package Name Only Search**: Searches only package names (not descriptions/metadata) for precise results
+  - **Relevance Sorting**: Results sorted by length then alphabetically (shorter/exact matches appear first)
+  - **Non-Scoped Priority**: Shows non-scoped packages before @-scoped packages for better visibility
+  - **Total Match Count**: Displays total number of matching packages found
+  - **Table Format Output**: Clean columnar display (NAME | VERSION | DESCRIPTION) with aligned columns
+  - **Global Caching**: Loads package list once per session for instant subsequent searches (~2-3s first search, <0.5s after)
+  - **Parallel API Fetching**: Package metadata retrieved concurrently using PowerShell runspaces for faster results (~0.9s vs 4+s sequential, 5x speedup)
+  - **Paginated Results**: Shows 20 packages at a time with "Show more? (Y/n)" prompt (defaults to yes for easy browsing)
+  - **Auto-Update Check**: Prompts to update package list if older than 24 hours with "Update now? (Y/n)" (defaults to yes)
+  - **Auto-Download**: If package list missing, prompts to download with "Download now? (90MB) (Y/n)"
+  - **Truncated Descriptions**: Descriptions limited to 60 characters for readability
+  - Fast local search across entire npm registry
+  - Shows [I] indicator for installed packages in green
+  - Intelligent fallback to `npm search` command if download declined or fails
+- **Backup Progress Fix**: Corrected Pass 2 progress meter calculation in `backup-dev.ps1`
+  - Previously: Progress based on total source file volume (all files in source)
+  - Now: Progress based on actual files to be copied (new, newer, and extra files only)
+  - Provides accurate progress percentage during backup operations
+  - Improved user experience with realistic completion estimates
+
+**Technical Details:**
+- npm package database: `resources/npm-packages.json` (90MB, 3.6M+ packages, updated from GitHub source)
+- Search algorithm: Substring match with relevance sorting (length-first)
+- Package metadata API: `https://registry.npmjs.org/<package-name>` for version/description
+- Parallel execution: PowerShell runspaces (lightweight threads) instead of jobs (avoided ~3x performance penalty from job serialization overhead)
+- Backup progress now uses robocopy summary columns: Copied + EXTRAS for both files and directories
+- ~80 lines modified in `cmdprmpt.ps1`, ~15 lines modified in `backup-dev.ps1`
+- Added `resources/` directory with README for package list management
+
 ### v1.2.2 (2025-11-04)
 
 **Package Manager - Enhanced PyPI Search & UX Improvements**

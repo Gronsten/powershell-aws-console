@@ -105,8 +105,8 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
 
 1. Clone this repository:
 ```powershell
-git clone https://github.com/yourusername/powershell-aws-console.git
-cd powershell-aws-console
+git clone https://github.com/yourusername/powershell-console.git
+cd powershell-console
 ```
 
 2. Copy `config.example.json` to `config.json`:

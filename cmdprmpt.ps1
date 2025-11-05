@@ -2433,7 +2433,7 @@ function Start-MerakiBackup {
     Write-Host ""
 
     # Check if we're in the right directory or if meraki-api folder exists
-    $merakiPath = Join-Path $script:Config.paths.workingDirectory "meraki-api"
+    $merakiPath = Join-Path $PSScriptRoot "meraki-api"
 
     if (Test-Path $merakiPath) {
         try {
@@ -2484,8 +2484,8 @@ function Start-MerakiBackup {
 }
 
 function Start-CodeCount {
-    $workingDir = $script:Config.paths.workingDirectory
-    $countScriptPath = Join-Path $workingDir "count-lines.py"
+    # Use $PSScriptRoot to get the actual script directory
+    $countScriptPath = Join-Path $PSScriptRoot "count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
@@ -2731,8 +2731,8 @@ function Start-CodeCount {
 
 # Helper function to get backup script path
 function Get-BackupScriptPath {
-    $workingDir = $script:Config.paths.workingDirectory
-    $backupScriptPath = Join-Path $workingDir "backup-dev.ps1"
+    # Use $PSScriptRoot to get the actual script directory (handles project renames automatically)
+    $backupScriptPath = Join-Path $PSScriptRoot "backup-dev.ps1"
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
@@ -3975,7 +3975,7 @@ function Show-AwsAccountMenu {
 
 function Start-CommandPrompt {
     Write-Host "Dropping to command prompt. Type 'exit' to return." -ForegroundColor Yellow
-    Invoke-Expression "pwsh -noe -wd '$($script:Config.paths.workingDirectory)'"
+    Invoke-Expression "pwsh -noe -wd '$PSScriptRoot'"
 }
 
 function Get-CurrentInstanceId {

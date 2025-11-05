@@ -1,6 +1,6 @@
-# PowerShell AWS Management Console
+# PowerShell Console
 
-A comprehensive, interactive PowerShell menu system for managing AWS infrastructure, EC2 instances, package managers, and remote access workflows with Okta authentication integration.
+A comprehensive, interactive PowerShell management console for AWS infrastructure, package managers, development utilities, and system administration. Features multi-account AWS management with Okta SSO, unified package management (Scoop/npm/pip/winget), development environment backups, and network utilities.
 
 ## Features
 
@@ -30,12 +30,24 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
 - **Export Capability**: Save VPN listings to timestamped text files
 
 ### Package Manager Integration
-- **Multi-Manager Support**: Unified interface for Scoop, npm, and winget package managers
+- **Multi-Manager Support**: Unified interface for Scoop, npm, pip (PyPI), and winget package managers
 - **Update Management**:
   - Check for updates across all package managers
   - Interactive checkbox selection for selective updates
   - Bulk update all packages with one command
-- **Package Search**: Search installed and globally available packages with installed highlighting
+- **npm Package Search (v1.2.3)**:
+  - **5x faster** search using PowerShell runspaces for parallel metadata retrieval
+  - **Complete Package Database**: Local copy of 3.6M+ npm packages (auto-downloads on first use)
+  - **Package Name Only Search**: Searches package names, not descriptions
+  - **Relevance Sorting**: Shorter/exact matches appear first
+  - **Table Format**: Clean columnar display (NAME | VERSION | DESCRIPTION)
+  - **Auto-Update**: Checks for stale data (>24 hours) and prompts to update
+  - **Pagination**: 20 results at a time with "Show more? (Y/n)" prompt
+  - **[I] Indicator**: Shows installed packages in green
+- **pip/PyPI Search (v1.2.2)**:
+  - JSON API integration for fast global package search
+  - Smart package discovery with common variations (python-X, X-python, pyX)
+  - Shows package version, summary, and homepage
 - **Package Listing**: View all installed packages sorted alphabetically
 - **Smart Parsing**: Properly handles package manager output formatting and progress indicators
 
@@ -99,6 +111,7 @@ A comprehensive, interactive PowerShell menu system for managing AWS infrastruct
 - **Package Managers** (optional):
   - Scoop (for Windows package management)
   - npm (for Node.js global packages)
+  - pip (for Python packages)
   - winget (Windows Package Manager)
 
 ## Installation
@@ -266,13 +279,23 @@ See [SETUP.md](SETUP.md) for detailed configuration options.
 
 ## Development History
 
-This project has evolved through extensive development with comprehensive tracking in TODO.md. Key milestones include:
+**Project renamed from `powershell-aws-console` to `powershell-console` in v1.2.3** to better reflect expanded functionality beyond AWS management.
 
+This project has evolved through extensive development with comprehensive tracking in CHANGELOG.md. Key milestones include:
+
+**Recent Major Features:**
+- **v1.2.3 (2025-11-05)**: Project rename + npm search rewrite (5x faster with runspaces) + backup progress fix
+- **v1.2.2 (2025-11-04)**: PyPI/pip search integration with JSON API
+- **v1.2.1 (2025-11-01)**: Minor updates and improvements
+- **v1.2.0 (2025-11-01)**: Additional feature enhancements
+- **v1.1.0 (2025-10-31)**: Backup Dev Environment with GNU-style arguments and progress tracking
+
+**Core Features:**
 - Initial menu system with arrow-key navigation
 - AWS multi-account and multi-role support
 - Okta authentication integration
 - Account synchronization from Okta
-- Package manager integration (Scoop, npm, winget)
+- Package manager integration (Scoop, npm, pip, winget)
 - Interactive update management
 - Menu customization and persistence
 - AWS context display and instance management
@@ -280,7 +303,7 @@ This project has evolved through extensive development with comprehensive tracki
 - Network configuration display
 - Aloha remote access automation
 
-See [CHANGELOG.md](CHANGELOG.md) for complete development history.
+See [CHANGELOG.md](CHANGELOG.md) for complete development history and [GitHub Releases](https://github.com/Gronsten/powershell-console/releases) for detailed release notes.
 
 ## Troubleshooting
 

@@ -1502,8 +1502,8 @@ function Search-Packages {
                             $remaining = $sortedMatches.Count - $startIndex
                             Write-Host ""
                             Write-Host "  Showing $startIndex of $($sortedMatches.Count) matches. $remaining more available." -ForegroundColor Yellow
-                            $response = Read-Host "  Show more? (y/N)"
-                            if ($response -notmatch '^[Yy]') {
+                            $response = Read-Host "  Show more? (Y/n)"
+                            if ($response -match '^[Nn]') {
                                 break
                             }
                             Write-Host ""

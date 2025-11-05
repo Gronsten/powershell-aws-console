@@ -36,7 +36,7 @@ Fixed two critical issues affecting package search and backup progress tracking.
   - **Table Format Output**: Clean columnar display (NAME | VERSION | DESCRIPTION) with aligned columns
   - **Global Caching**: Loads package list once per session for instant subsequent searches (~2-3s first search, <0.5s after)
   - **Parallel API Fetching**: Package metadata retrieved concurrently using PowerShell runspaces for faster results (~0.9s vs 4+s sequential, 5x speedup)
-  - **Paginated Results**: Shows 20 packages at a time with "Show more? (y/N)" prompt for additional results
+  - **Paginated Results**: Shows 20 packages at a time with "Show more? (Y/n)" prompt (defaults to yes for easy browsing)
   - **Auto-Update Check**: Prompts to update package list if older than 24 hours with "Update now? (y/N)"
   - **Truncated Descriptions**: Descriptions limited to 60 characters for readability
   - Fast local search across entire npm registry

@@ -2432,8 +2432,10 @@ function Start-MerakiBackup {
     Write-Host "Starting Meraki Backup..." -ForegroundColor Green
     Write-Host ""
 
-    # Check if we're in the right directory or if meraki-api folder exists
-    $merakiPath = Join-Path $PSScriptRoot "meraki-api"
+    # Check if meraki-api folder exists in parent directory (C:\AppInstall\dev\meraki-api)
+    # meraki-api is a separate project at the same level as powershell-console
+    $devRoot = Split-Path $PSScriptRoot -Parent
+    $merakiPath = Join-Path $devRoot "meraki-api"
 
     if (Test-Path $merakiPath) {
         try {
@@ -2477,7 +2479,7 @@ function Start-MerakiBackup {
     }
     else {
         Write-Host "Meraki API directory not found at: $merakiPath" -ForegroundColor Red
-        Write-Host "Please ensure the meraki-api folder exists in the working directory." -ForegroundColor Yellow
+        Write-Host "Please ensure the meraki-api folder exists in the dev directory (same level as powershell-console)." -ForegroundColor Yellow
     }
 
     pause

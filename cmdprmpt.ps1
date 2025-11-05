@@ -1377,9 +1377,9 @@ function Search-Packages {
                     $ageText = if ($days -gt 0) { "$days day(s)" } else { "$hours hour(s)" }
 
                     Write-Host "  Package list is $ageText old." -ForegroundColor Yellow
-                    $updateResponse = Read-Host "  Update now? (y/N)"
+                    $updateResponse = Read-Host "  Update now? (Y/n)"
 
-                    if ($updateResponse -match '^[Yy]') {
+                    if ($updateResponse -notmatch '^[Nn]') {
                         Write-Host "  Downloading updated package list (90MB)..." -ForegroundColor Cyan
                         try {
                             $packageListUrl = "https://raw.githubusercontent.com/nice-registry/all-the-package-names/master/names.json"

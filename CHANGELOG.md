@@ -20,6 +20,29 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.4 (2025-11-05)
+
+**Bug Fixes - Path Resolution**
+
+Fixed critical bugs introduced by project rename where several features were using hardcoded config paths instead of dynamic script location.
+
+**Changes:**
+- **Path Resolution Fix**: Replaced all instances of `$script:Config.paths.workingDirectory` with `$PSScriptRoot`
+  - Automatically references script's actual location regardless of directory name
+  - Eliminates dependency on config.json being updated after directory renames
+  - More resilient to user configuration changes
+- **Backup Dev Environment**: Fixed "backup-dev.ps1 not found" errors (all 4 backup options)
+- **Code Count**: Fixed null reference error in `$devRoot` initialization
+- **Meraki Backup**: Fixed path lookup to find meraki-api in parent directory (sibling project)
+- **Meraki Backup Interactive Mode**: Added `-i` flag to prevent hanging when backing up all organizations
+- **Command Prompt**: Fixed working directory path resolution
+
+**Impact:**
+- ✅ Backup Dev Environment fully functional
+- ✅ Meraki Backup prompts for org/network selection
+- ✅ Code Count navigation working correctly
+- ✅ Command Prompt opens in correct directory
+
 ### v1.2.3 (2025-11-05)
 
 **Project Rename & Bug Fixes**

@@ -37,9 +37,22 @@ Or on Windows without curl:
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nice-registry/all-the-package-names/master/names.json" -OutFile "resources/npm-packages.json"
 ```
 
-### Initial Setup
+### Initial Setup / Auto-Download
 
-If you've just cloned this repository, you need to download the package list:
+**Automatic (Recommended):**
+The package search feature will automatically prompt you to download the package list the first time you search for an npm package:
+
+```
+Package list not found. Download now? (90MB) (Y/n)
+```
+
+Simply press Enter (or `y`) to download automatically. The script will:
+- Create the `resources/` directory if needed
+- Download the 90MB package list
+- Continue with your search
+
+**Manual Setup:**
+If you prefer to download manually before first use:
 
 ```powershell
 # Create resources directory if it doesn't exist

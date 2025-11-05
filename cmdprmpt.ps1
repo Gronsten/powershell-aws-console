@@ -1338,10 +1338,35 @@ function Search-Packages {
                 # Load local npm package list (3.6M+ packages from npm registry)
                 $packageListFile = Join-Path $PSScriptRoot "resources\npm-packages.json"
 
+                # Download package list if it doesn't exist
                 if (-not (Test-Path $packageListFile)) {
-                    Write-Host "  Error: npm package list not found at $packageListFile" -ForegroundColor Red
-                    Write-Host "  Please ensure resources/npm-packages.json exists" -ForegroundColor Yellow
-                    throw "Package list not found"
+                    Write-Host "  Package list not found. Download now? (90MB) (Y/n)" -ForegroundColor Yellow
+                    $downloadResponse = Read-Host "  "
+
+                    if ($downloadResponse -notmatch '^[Nn]') {
+                        Write-Host "  Downloading package list (90MB)..." -ForegroundColor Cyan
+
+                        # Ensure resources directory exists
+                        $resourcesDir = Join-Path $PSScriptRoot "resources"
+                        if (-not (Test-Path $resourcesDir)) {
+                            New-Item -ItemType Directory -Path $resourcesDir -Force | Out-Null
+                        }
+
+                        try {
+                            $packageListUrl = "https://raw.githubusercontent.com/nice-registry/all-the-package-names/master/names.json"
+                            Invoke-WebRequest -Uri $packageListUrl -OutFile $packageListFile -ErrorAction Stop
+                            Write-Host "  Package list downloaded successfully!" -ForegroundColor Green
+                            Write-Host ""
+                        }
+                        catch {
+                            Write-Host "  Error: Failed to download package list." -ForegroundColor Red
+                            Write-Host "  $_" -ForegroundColor Red
+                            throw "Download failed"
+                        }
+                    } else {
+                        Write-Host "  Skipping download. Falling back to npm search command..." -ForegroundColor Yellow
+                        throw "Package list download declined"
+                    }
                 }
 
                 # Check if package list needs updating (older than 24 hours)

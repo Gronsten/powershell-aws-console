@@ -38,10 +38,11 @@ Fixed two critical issues affecting package search and backup progress tracking.
   - **Parallel API Fetching**: Package metadata retrieved concurrently using PowerShell runspaces for faster results (~0.9s vs 4+s sequential, 5x speedup)
   - **Paginated Results**: Shows 20 packages at a time with "Show more? (Y/n)" prompt (defaults to yes for easy browsing)
   - **Auto-Update Check**: Prompts to update package list if older than 24 hours with "Update now? (y/N)"
+  - **Auto-Download**: If package list missing, prompts to download with "Download now? (90MB) (Y/n)"
   - **Truncated Descriptions**: Descriptions limited to 60 characters for readability
   - Fast local search across entire npm registry
   - Shows [I] indicator for installed packages in green
-  - Intelligent fallback to `npm search` command if package list unavailable
+  - Intelligent fallback to `npm search` command if download declined or fails
 - **Backup Progress Fix**: Corrected Pass 2 progress meter calculation in `backup-dev.ps1`
   - Previously: Progress based on total source file volume (all files in source)
   - Now: Progress based on actual files to be copied (new, newer, and extra files only)

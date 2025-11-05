@@ -1411,10 +1411,16 @@ function Search-Packages {
                         Write-Host "  NAME              VERSION         DESCRIPTION" -ForegroundColor Cyan
                         Write-Host "  ================  ==============  ========================================" -ForegroundColor DarkGray
 
-                        # Fetch package metadata in parallel for better performance
-                        $jobs = @()
+                        # Fetch package metadata in parallel using runspaces for better performance
+                        $runspacePool = [runspacefactory]::CreateRunspacePool(1, 20)
+                        $runspacePool.Open()
+
+                        $runspaces = @()
                         foreach ($pkgName in $currentBatch) {
-                            $jobs += Start-Job -ScriptBlock {
+                            $powershell = [powershell]::Create()
+                            $powershell.RunspacePool = $runspacePool
+
+                            [void]$powershell.AddScript({
                                 param($name, $url)
                                 try {
                                     $data = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -TimeoutSec 3
@@ -1430,21 +1436,29 @@ function Search-Packages {
                                         success = $false
                                     }
                                 }
-                            } -ArgumentList $pkgName, "https://registry.npmjs.org/$pkgName"
+                            })
+                            [void]$powershell.AddArgument($pkgName)
+                            [void]$powershell.AddArgument("https://registry.npmjs.org/$pkgName")
+
+                            $runspaces += @{
+                                Pipe = $powershell
+                                Status = $powershell.BeginInvoke()
+                                PackageName = $pkgName
+                            }
                         }
 
-                        # Wait for all jobs to complete (with timeout)
-                        $null = Wait-Job -Job $jobs -Timeout 10
-
-                        # Collect and display results
+                        # Wait for all runspaces to complete and collect results
                         $results = @{}
-                        foreach ($job in $jobs) {
-                            $result = Receive-Job -Job $job
+                        foreach ($runspace in $runspaces) {
+                            $result = $runspace.Pipe.EndInvoke($runspace.Status)
                             if ($result) {
                                 $results[$result.name] = $result
                             }
-                            Remove-Job -Job $job -Force
+                            $runspace.Pipe.Dispose()
                         }
+
+                        $runspacePool.Close()
+                        $runspacePool.Dispose()
 
                         # Display packages in original order
                         foreach ($pkgName in $currentBatch) {

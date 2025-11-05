@@ -35,7 +35,7 @@ Fixed two critical issues affecting package search and backup progress tracking.
   - **Total Match Count**: Displays total number of matching packages found
   - **Table Format Output**: Clean columnar display (NAME | VERSION | DESCRIPTION) with aligned columns
   - **Global Caching**: Loads package list once per session for instant subsequent searches (~2-3s first search, <0.5s after)
-  - **Parallel API Fetching**: Package metadata retrieved concurrently using PowerShell jobs for faster results (~0.5s vs 3+s sequential)
+  - **Parallel API Fetching**: Package metadata retrieved concurrently using PowerShell runspaces for faster results (~0.9s vs 4+s sequential, 5x speedup)
   - **Paginated Results**: Shows 20 packages at a time with "Show more? (y/N)" prompt for additional results
   - **Auto-Update Check**: Prompts to update package list if older than 24 hours with "Update now? (y/N)"
   - **Truncated Descriptions**: Descriptions limited to 60 characters for readability
@@ -52,6 +52,7 @@ Fixed two critical issues affecting package search and backup progress tracking.
 - npm package database: `resources/npm-packages.json` (90MB, 3.6M+ packages, updated from GitHub source)
 - Search algorithm: Substring match with relevance sorting (length-first)
 - Package metadata API: `https://registry.npmjs.org/<package-name>` for version/description
+- Parallel execution: PowerShell runspaces (lightweight threads) instead of jobs (avoided ~3x performance penalty from job serialization overhead)
 - Backup progress now uses robocopy summary columns: Copied + EXTRAS for both files and directories
 - ~80 lines modified in `cmdprmpt.ps1`, ~15 lines modified in `backup-dev.ps1`
 - Added `resources/` directory with README for package list management

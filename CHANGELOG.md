@@ -22,6 +22,16 @@ All notable changes to this project have been documented during development.
 
 ### v1.2.3 (2025-11-05)
 
+**Project Rename & Bug Fixes**
+
+**BREAKING CHANGE:** Project renamed from `powershell-aws-console` to `powershell-console` to better reflect its expanded functionality beyond AWS management (package managers, backups, utilities, etc.).
+
+**Migration Notes:**
+- GitHub repository: `Gronsten/powershell-aws-console` → `Gronsten/powershell-console` (old URLs automatically redirect)
+- Local directory: Update your clone path from `powershell-aws-console` to `powershell-console`
+- Git remote: Run `git remote set-url origin https://github.com/Gronsten/powershell-console.git`
+- All internal functionality remains unchanged - no code changes required
+
 **Bug Fixes - Package Search & Backup Progress**
 
 Fixed two critical issues affecting package search and backup progress tracking.

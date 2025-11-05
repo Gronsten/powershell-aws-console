@@ -20,6 +20,41 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.2.3 (2025-11-05)
+
+**Bug Fixes - Package Search & Backup Progress**
+
+Fixed two critical issues affecting package search and backup progress tracking.
+
+**Changes:**
+- **npm Package Name Search**: Replaced slow `npm search` command with local package database
+  - **Complete Package Database**: Uses local copy of all 3.6M+ npm package names from [nice-registry/all-the-package-names](https://github.com/nice-registry/all-the-package-names)
+  - **Package Name Only Search**: Searches only package names (not descriptions/metadata) for precise results
+  - **Relevance Sorting**: Results sorted by length then alphabetically (shorter/exact matches appear first)
+  - **Non-Scoped Priority**: Shows non-scoped packages before @-scoped packages for better visibility
+  - **Total Match Count**: Displays total number of matching packages found
+  - **Table Format Output**: Clean columnar display (NAME | VERSION | DESCRIPTION) with aligned columns
+  - **Global Caching**: Loads package list once per session for instant subsequent searches (~2-3s first search, <0.5s after)
+  - **Paginated Results**: Shows 20 packages at a time with "Show more? (y/N)" prompt for additional results
+  - **Auto-Update Check**: Prompts to update package list if older than 24 hours with "Update now? (y/N)"
+  - **Truncated Descriptions**: Descriptions limited to 60 characters for readability
+  - Fast local search across entire npm registry
+  - Shows [I] indicator for installed packages in green
+  - Intelligent fallback to `npm search` command if package list unavailable
+- **Backup Progress Fix**: Corrected Pass 2 progress meter calculation in `backup-dev.ps1`
+  - Previously: Progress based on total source file volume (all files in source)
+  - Now: Progress based on actual files to be copied (new, newer, and extra files only)
+  - Provides accurate progress percentage during backup operations
+  - Improved user experience with realistic completion estimates
+
+**Technical Details:**
+- npm package database: `resources/npm-packages.json` (90MB, 3.6M+ packages, updated from GitHub source)
+- Search algorithm: Substring match with relevance sorting (length-first)
+- Package metadata API: `https://registry.npmjs.org/<package-name>` for version/description
+- Backup progress now uses robocopy summary columns: Copied + EXTRAS for both files and directories
+- ~80 lines modified in `cmdprmpt.ps1`, ~15 lines modified in `backup-dev.ps1`
+- Added `resources/` directory with README for package list management
+
 ### v1.2.2 (2025-11-04)
 
 **Package Manager - Enhanced PyPI Search & UX Improvements**

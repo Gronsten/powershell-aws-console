@@ -107,3 +107,6 @@ build/
 # Compiled files
 *.dll
 *.pdb
+
+# Resources - large data files
+resources/npm-packages.json

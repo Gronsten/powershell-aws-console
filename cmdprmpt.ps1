@@ -1331,41 +1331,177 @@ function Search-Packages {
                 }
             }
         } else {
-            # Search globally available npm packages
+            # Search globally available npm packages by name
             Write-Host "  Searching npm registry for '$searchTerm'..." -ForegroundColor Gray
-            $npmSearch = npm search $searchTerm 2>&1 | Out-String
 
-            if ($npmSearch -match "No matches found" -or [string]::IsNullOrWhiteSpace($npmSearch)) {
-                Write-Host "  No matches found" -ForegroundColor Gray
-            } else {
-                $npmLines = $npmSearch -split "`n"
-                $headerShown = $false
+            try {
+                # Load local npm package list (3.6M+ packages from npm registry)
+                $packageListFile = Join-Path $PSScriptRoot "resources\npm-packages.json"
 
-                foreach ($line in $npmLines) {
-                    if ($line.Trim().Length -eq 0) { continue }
+                if (-not (Test-Path $packageListFile)) {
+                    Write-Host "  Error: npm package list not found at $packageListFile" -ForegroundColor Red
+                    Write-Host "  Please ensure resources/npm-packages.json exists" -ForegroundColor Yellow
+                    throw "Package list not found"
+                }
 
-                    # Show header line
-                    if ($line -match '^NAME' -or $line -match '^=+') {
-                        Write-Host $line
-                        $headerShown = $true
-                        continue
+                # Check if package list needs updating (older than 24 hours)
+                $fileAge = (Get-Date) - (Get-Item $packageListFile).LastWriteTime
+                if ($fileAge.TotalHours -gt 24) {
+                    $days = [int]$fileAge.TotalDays
+                    $hours = [int]$fileAge.TotalHours
+                    $ageText = if ($days -gt 0) { "$days day(s)" } else { "$hours hour(s)" }
+
+                    Write-Host "  Package list is $ageText old." -ForegroundColor Yellow
+                    $updateResponse = Read-Host "  Update now? (y/N)"
+
+                    if ($updateResponse -match '^[Yy]') {
+                        Write-Host "  Downloading updated package list (90MB)..." -ForegroundColor Cyan
+                        try {
+                            $packageListUrl = "https://raw.githubusercontent.com/nice-registry/all-the-package-names/master/names.json"
+                            Invoke-WebRequest -Uri $packageListUrl -OutFile $packageListFile -ErrorAction Stop
+                            Write-Host "  Package list updated successfully!" -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Host "  Warning: Failed to update package list. Using existing version." -ForegroundColor Yellow
+                        }
                     }
+                    Write-Host ""
+                }
 
-                    # Check if this package is installed
-                    if ($headerShown) {
-                        $isInstalled = $false
-                        # Extract package name (first column)
-                        if ($line -match '^\s*(\S+)') {
-                            $pkgName = $matches[1]
-                            if ($installedNpm -contains $pkgName) {
-                                $isInstalled = $true
+                # Load and cache the package list (global variable for performance)
+                if (-not $global:npmPackageCache) {
+                    Write-Host "  Loading package database (one-time per session)..." -ForegroundColor Gray
+                    $global:npmPackageCache = Get-Content $packageListFile -Raw | ConvertFrom-Json
+                }
+                $allPackages = $global:npmPackageCache
+
+                # Filter packages by name (case-insensitive substring match)
+                $matchedNamesAll = $allPackages | Where-Object { $_ -like "*$searchTerm*" }
+
+                # Sort by relevance: shorter names first, then alphabetical
+                # This prioritizes exact matches and similar names
+                $sortedMatches = $matchedNamesAll | Sort-Object { $_.Length }, { $_ }
+
+                # Prioritize non-scoped packages (without @) for better visibility
+                $nonScoped = $sortedMatches | Where-Object { -not $_.StartsWith('@') } | Select-Object -First 20
+                $scoped = $sortedMatches | Where-Object { $_.StartsWith('@') } | Select-Object -First (20 - $nonScoped.Count)
+                $matchedNames = @($nonScoped) + @($scoped)
+
+                if ($sortedMatches.Count -eq 0) {
+                    Write-Host "  No matches found" -ForegroundColor Gray
+                } else {
+                    # Show total matches found
+                    Write-Host "  Found $($sortedMatches.Count) matching packages" -ForegroundColor Cyan
+                    Write-Host ""
+
+                    # Display packages in batches of 20
+                    $batchSize = 20
+                    $startIndex = 0
+
+                    while ($startIndex -lt $sortedMatches.Count) {
+                        # Get next batch (prioritize non-scoped first)
+                        $remainingMatches = $sortedMatches | Select-Object -Skip $startIndex
+                        $nonScoped = $remainingMatches | Where-Object { -not $_.StartsWith('@') } | Select-Object -First $batchSize
+                        $scoped = $remainingMatches | Where-Object { $_.StartsWith('@') } | Select-Object -First ($batchSize - $nonScoped.Count)
+                        $currentBatch = @($nonScoped) + @($scoped)
+
+                        if ($currentBatch.Count -eq 0) { break }
+
+                        # Print table header
+                        Write-Host "  NAME              VERSION   DESCRIPTION" -ForegroundColor Cyan
+                        Write-Host "  ================  ========  ========================================" -ForegroundColor DarkGray
+
+                        # Fetch and display packages in current batch (table format)
+                        foreach ($pkgName in $currentBatch) {
+                            try {
+                                # Direct lookup for package metadata
+                                $pkgUrl = "https://registry.npmjs.org/$pkgName"
+                                $pkgData = Invoke-RestMethod -Uri $pkgUrl -Method Get -ErrorAction Stop -TimeoutSec 2
+
+                                $isInstalled = $installedNpm -contains $pkgName
+                                $version = $pkgData.'dist-tags'.latest
+                                $description = if ($pkgData.description) { $pkgData.description } else { "" }
+
+                                # Truncate description to fit in table (60 chars max)
+                                if ($description.Length -gt 60) {
+                                    $description = $description.Substring(0, 57) + "..."
+                                }
+
+                                # Format name with [I] indicator if installed
+                                $nameDisplay = if ($isInstalled) { "$pkgName [I]" } else { $pkgName }
+
+                                # Pad columns for alignment
+                                $namePadded = $nameDisplay.PadRight(16)
+                                $versionPadded = $version.PadRight(8)
+
+                                # Color installed packages green
+                                if ($isInstalled) {
+                                    Write-Host "  $namePadded  $versionPadded  $description" -ForegroundColor Green
+                                } else {
+                                    Write-Host "  $namePadded  $versionPadded  $description"
+                                }
+                            }
+                            catch {
+                                # Failed to fetch metadata, show package name only
+                                $namePadded = $pkgName.PadRight(16)
+                                Write-Host "  $namePadded  (error)   Unable to fetch package details" -ForegroundColor DarkGray
                             }
                         }
+                        Write-Host ""
 
-                        if ($isInstalled) {
-                            Write-Host $line -ForegroundColor Green
-                        } else {
+                        $startIndex += $currentBatch.Count
+
+                        # Prompt to show more if there are remaining packages
+                        if ($startIndex -lt $sortedMatches.Count) {
+                            $remaining = $sortedMatches.Count - $startIndex
+                            Write-Host ""
+                            Write-Host "  Showing $startIndex of $($sortedMatches.Count) matches. $remaining more available." -ForegroundColor Yellow
+                            $response = Read-Host "  Show more? (y/N)"
+                            if ($response -notmatch '^[Yy]') {
+                                break
+                            }
+                            Write-Host ""
+                        }
+                    }
+                }
+            }
+            catch {
+                # Fallback to npm search command if API fails
+                Write-Host "  API search failed, trying npm search command..." -ForegroundColor Gray
+                $npmSearch = npm search $searchTerm 2>&1 | Out-String
+
+                if ($npmSearch -match "No matches found" -or [string]::IsNullOrWhiteSpace($npmSearch)) {
+                    Write-Host "  No matches found" -ForegroundColor Gray
+                } else {
+                    $npmLines = $npmSearch -split "`n"
+                    $headerShown = $false
+
+                    foreach ($line in $npmLines) {
+                        if ($line.Trim().Length -eq 0) { continue }
+
+                        # Show header line
+                        if ($line -match '^NAME' -or $line -match '^=+') {
                             Write-Host $line
+                            $headerShown = $true
+                            continue
+                        }
+
+                        # Check if this package is installed
+                        if ($headerShown) {
+                            $isInstalled = $false
+                            # Extract package name (first column)
+                            if ($line -match '^\s*(\S+)') {
+                                $pkgName = $matches[1]
+                                if ($installedNpm -contains $pkgName) {
+                                    $isInstalled = $true
+                                }
+                            }
+
+                            if ($isInstalled) {
+                                Write-Host $line -ForegroundColor Green
+                            } else {
+                                Write-Host $line
+                            }
                         }
                     }
                 }

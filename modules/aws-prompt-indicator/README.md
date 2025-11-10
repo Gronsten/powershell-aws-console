@@ -88,13 +88,40 @@ try {
     $initResult = Initialize-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -ErrorAction Stop
 
     if ($initResult) {
-        # Function to update AWS mismatch status
+        # Function to update AWS mismatch status and account display
         function Update-AwsMismatchStatus {
             $status = Test-AwsAccountMismatch
+            $currentAccountId = Get-CurrentAwsAccountId
+
+            # Set mismatch status for oh-my-posh theme
             if ($status.HasMismatch) {
                 $env:AWS_ACCOUNT_MISMATCH = "true"
+                $env:AWS_ACCOUNT_MATCH = "false"
+            } elseif ($currentAccountId) {
+                $env:AWS_ACCOUNT_MISMATCH = "false"
+                $env:AWS_ACCOUNT_MATCH = "true"
             } else {
                 $env:AWS_ACCOUNT_MISMATCH = "false"
+                $env:AWS_ACCOUNT_MATCH = "false"
+            }
+
+            # Set display name for session segment (falls back to username if not logged into AWS)
+            if ($currentAccountId) {
+                $configPath = "C:\AppInstall\dev\powershell-console\config.json"
+                $config = Get-Content $configPath -Raw | ConvertFrom-Json
+
+                # Find friendly name from config environments
+                $friendlyName = $null
+                foreach ($env in $config.environments.PSObject.Properties) {
+                    if ($env.Value.accountId -eq $currentAccountId) {
+                        $friendlyName = if ($env.Value.displayName) { $env.Value.displayName } else { $env.Name }
+                        break
+                    }
+                }
+
+                $env:AWS_DISPLAY_NAME = if ($friendlyName) { $friendlyName } else { $currentAccountId }
+            } else {
+                $env:AWS_DISPLAY_NAME = $env:USERNAME
             }
         }
 
@@ -107,6 +134,7 @@ try {
 } catch {
     # Silently fail if module not available
     $global:AwsPromptIndicatorEnabled = $false
+    $env:AWS_DISPLAY_NAME = $env:USERNAME
 }
 
 # Load oh-my-posh with AWS-enabled theme
@@ -141,27 +169,48 @@ If you're using the `quick-term` theme, we've created a pre-configured version f
 
 **File**: [quick-term-aws.omp.json](./quick-term-aws.omp.json)
 
-This is your existing `quick-term` theme with the AWS mismatch indicator added to the right side of the prompt (between execution time and clock).
+This is your existing `quick-term` theme with enhanced AWS integration:
+
+**Features**:
+1. **Session Segment** - Displays AWS account friendly name when logged in, falls back to username when not
+2. **AWS Status Indicator** - Shows match/mismatch status between execution time and clock
 
 See the **PowerShell Profile Integration** section above for the recommended setup that includes both the module loading and theme configuration.
 
 **What you'll see**:
-- **Normal (match)**: Your usual prompt - clean and unchanged
-- **Mismatch**: `⚠️ AWS MISMATCH` appears in yellow between execution time and clock
+- **No AWS session**: Shows your username (e.g., `john.doe`)
+- **AWS match**: Shows AWS account name (e.g., `My Project Prod`) + green `✔ AWS` indicator
+- **AWS mismatch**: Shows AWS account name + yellow `⚠️ AWS MISMATCH` indicator
 
 #### Custom Theme Integration
 
 For other oh-my-posh themes, add this segment to your theme's right-side prompt block:
 
+**AWS Status Indicator** (shows green checkmark on match, yellow warning on mismatch):
 ```json
 {
   "background": "#d7af00",
   "foreground": "#121318",
+  "background_templates": [
+    "{{ if eq .Env.AWS_ACCOUNT_MATCH \"true\" }}#378504{{ end }}"
+  ],
   "invert_powerline": true,
   "style": "diamond",
   "leading_diamond": "\ue0b2",
-  "template": "{{ if eq .Env.AWS_ACCOUNT_MISMATCH \"true\" }} \u26a0\ufe0f AWS MISMATCH {{ end }}",
+  "template": "{{ if eq .Env.AWS_ACCOUNT_MISMATCH \"true\" }} \u26a0\ufe0f AWS MISMATCH {{ else if eq .Env.AWS_ACCOUNT_MATCH \"true\" }} \u2714 AWS {{ end }}",
   "type": "text"
+}
+```
+
+**Session Segment** (replace your existing session segment to show AWS account name):
+```json
+{
+  "background": "#e4e4e4",
+  "foreground": "#4e4e4e",
+  "style": "powerline",
+  "powerline_symbol": "\ue0b0",
+  "template": " {{ if .Env.AWS_DISPLAY_NAME }}{{ .Env.AWS_DISPLAY_NAME }}{{ else }}{{ .UserName }}{{ end }} ",
+  "type": "session"
 }
 ```
 

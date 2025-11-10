@@ -59,6 +59,11 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
         #     if 'backups' in parts or 'logs' in parts or "config" in parts:
         #         return True
 
+        # meraki-api: exclude backups, logs, and config directories
+        elif project == 'meraki-api':
+            if 'backups' in parts or 'logs' in parts or "config" in parts:
+                return True
+
         # misc-scripts: exclude specific files
         elif project == 'misc-scripts':
             if (file_path.name == '30001_KEVLAR_61F.conf' or

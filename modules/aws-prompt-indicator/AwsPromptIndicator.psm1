@@ -27,6 +27,8 @@ $script:ConfigPath = $null
 $script:DirectoryMappings = @{}
 $script:ProfileToAccountMap = @{}
 $script:Config = $null
+$script:CachedAccountId = $null
+$script:CredentialsFileLastModified = $null
 
 <#
 .SYNOPSIS
@@ -121,10 +123,24 @@ function Get-CurrentAwsAccountId {
 
     if (-not (Test-Path $script:AwsCredentialsPath)) {
         Write-Verbose "AWS credentials file not found: $script:AwsCredentialsPath"
+        $script:CachedAccountId = $null
+        $script:CredentialsFileLastModified = $null
         return $null
     }
 
     try {
+        # Check if credentials file has been modified since last read
+        $fileInfo = Get-Item $script:AwsCredentialsPath
+        $currentLastModified = $fileInfo.LastWriteTime
+
+        # Use cached value if file hasn't changed
+        if ($script:CredentialsFileLastModified -eq $currentLastModified -and $null -ne $script:CachedAccountId) {
+            Write-Verbose "Using cached account ID: $script:CachedAccountId (file unchanged)"
+            return $script:CachedAccountId
+        }
+
+        # File changed or first read - parse it
+        Write-Verbose "Credentials file changed or first read - parsing..."
         $credContent = Get-Content $script:AwsCredentialsPath -Raw
 
         # Find all profile names in the credentials file
@@ -132,6 +148,8 @@ function Get-CurrentAwsAccountId {
 
         if ($profiles.Count -eq 0) {
             Write-Verbose "No profiles found in credentials file"
+            $script:CachedAccountId = $null
+            $script:CredentialsFileLastModified = $currentLastModified
             return $null
         }
 
@@ -144,16 +162,20 @@ function Get-CurrentAwsAccountId {
 
         if ($accountId) {
             Write-Verbose "Mapped profile '$activeProfile' to account: $accountId"
+            $script:CachedAccountId = $accountId
+            $script:CredentialsFileLastModified = $currentLastModified
             return $accountId
         }
         else {
             Write-Verbose "No account mapping found for profile: $activeProfile"
+            $script:CachedAccountId = $null
+            $script:CredentialsFileLastModified = $currentLastModified
             return $null
         }
     }
     catch {
         Write-Verbose "Error reading AWS credentials: $_"
-        return $null
+        return $script:CachedAccountId  # Return cached value on error
     }
 }
 

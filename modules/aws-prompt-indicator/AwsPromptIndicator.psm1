@@ -153,21 +153,46 @@ function Get-CurrentAwsAccountId {
             return $null
         }
 
-        # Use the last profile in the file (most recently written by okta-aws-cli)
-        $activeProfile = $profiles[-1]
+        # Prefer [default] profile if it exists (okta-aws-cli writes here)
+        # Otherwise use the last profile in the file
+        $activeProfile = if ($profiles -contains "default") {
+            Write-Verbose "Using [default] profile (okta-aws-cli standard)"
+            "default"
+        } else {
+            Write-Verbose "No [default] profile, using last profile in file"
+            $profiles[-1]
+        }
         Write-Verbose "Active profile from credentials file: $activeProfile"
 
         # Try to map profile name to account ID
         $accountId = $script:ProfileToAccountMap[$activeProfile]
 
+        # If profile name doesn't map, try AWS CLI as fallback (e.g., for [default] profile)
+        if (-not $accountId -and $activeProfile -eq "default") {
+            Write-Verbose "Profile '$activeProfile' has no mapping, using AWS CLI fallback"
+            try {
+                $identityJson = aws sts get-caller-identity 2>$null
+                if ($LASTEXITCODE -eq 0 -and $identityJson) {
+                    $identity = $identityJson | ConvertFrom-Json
+                    $accountId = $identity.Account
+                    if ($accountId -match '^\d{12}$') {
+                        Write-Verbose "Retrieved account from AWS CLI: $accountId"
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "AWS CLI fallback failed: $_"
+            }
+        }
+
         if ($accountId) {
-            Write-Verbose "Mapped profile '$activeProfile' to account: $accountId"
+            Write-Verbose "Final account ID: $accountId"
             $script:CachedAccountId = $accountId
             $script:CredentialsFileLastModified = $currentLastModified
             return $accountId
         }
         else {
-            Write-Verbose "No account mapping found for profile: $activeProfile"
+            Write-Verbose "No account ID determined for profile: $activeProfile"
             $script:CachedAccountId = $null
             $script:CredentialsFileLastModified = $currentLastModified
             return $null

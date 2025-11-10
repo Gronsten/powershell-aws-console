@@ -180,5 +180,13 @@
       }
     ]
   },
-  "awsAccountMenuOrder": []
+  "awsAccountMenuOrder": [],
+  "awsPromptIndicator": {
+    "enabled": false,
+    "directoryMappings": {
+      "C:\\path\\to\\project1": "123456789012",
+      "C:\\path\\to\\project2": "987654321098"
+    },
+    "_comment": "Enable this module to show visual warnings when current directory's expected AWS account doesn't match active session. Set enabled=true and map your directories to AWS account IDs. See modules/aws-prompt-indicator/README.md for setup."
+  }
 }

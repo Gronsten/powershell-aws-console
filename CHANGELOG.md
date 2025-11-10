@@ -27,19 +27,32 @@ All notable changes to this project have been documented during development.
 Added optional PowerShell module for displaying visual indicators in oh-my-posh prompts when your current directory's expected AWS account doesn't match your active AWS session.
 
 **Features:**
+- **Smart Session Display**: Shows AWS account friendly name in prompt instead of username
+  - Falls back to username when not logged into AWS
+  - Uses `displayName` from config.json environments
+  - Provides at-a-glance awareness of current AWS context
+- **Visual Match/Mismatch Indicators**:
+  - Green checkmark (✔ AWS) when in correct account
+  - Yellow warning (⚠️ AWS MISMATCH) when in wrong account
+  - Indicators only appear in directories mapped to AWS accounts
+  - Prevents accidental deployments to wrong environments
 - **Directory-to-Account Mapping**: Configure which AWS accounts are expected for specific working directories
 - **Automatic Detection**: Reads active AWS account from `~/.aws/credentials` (set by okta-aws-cli)
-- **oh-my-posh Integration**: Example theme with custom segment for visual mismatch warnings
+  - Smart caching with file change detection (<1ms typical, ~3ms on updates)
+  - Hybrid detection: Fast file parsing + AWS CLI fallback for [default] profile
+- **oh-my-posh Integration**: Pre-configured quick-term theme with AWS features
+- **Simple Setup**: Two-line PowerShell profile integration via `Enable-AwsPromptIndicator`
 - **Flexible Usage Options**:
   - oh-my-posh custom segment (recommended)
   - PowerShell profile function integration
   - Direct module function calls for custom implementations
-- **Zero Impact When Disabled**: Feature disabled by default, opt-in via config.json
+- **Performance Optimized**: Smart caching, file change detection, minimal overhead
 - **Comprehensive Documentation**: Dedicated README with setup instructions, examples, and troubleshooting
 
 **Module Functions:**
+- `Enable-AwsPromptIndicator`: ⭐ One-step integration for PowerShell profiles (recommended)
 - `Initialize-AwsPromptIndicator`: Load configuration and directory mappings
-- `Get-CurrentAwsAccountId`: Read active AWS account from credentials file
+- `Get-CurrentAwsAccountId`: Read active AWS account from credentials file (cached)
 - `Get-ExpectedAwsAccountId`: Determine expected account for current directory
 - `Test-AwsAccountMismatch`: Compare current and expected accounts
 - `Get-AwsPromptIndicator`: Simple text indicator for custom prompts
@@ -49,31 +62,44 @@ Added optional PowerShell module for displaying visual indicators in oh-my-posh 
 ```json
 {
   "awsPromptIndicator": {
-    "enabled": false,
     "directoryMappings": {
-      "C:\\AppInstall\\dev\\entity-network-hub": "054427526671",
-      "C:\\AppInstall\\dev\\ets-nettools": "041457850300"
+      "C:\\path\\to\\project-alpha": "123456789012",
+      "C:\\path\\to\\project-beta": "210987654321"
     }
   }
 }
 ```
 
 **Files Added:**
-- `modules/aws-prompt-indicator/AwsPromptIndicator.psm1` - Main PowerShell module
-- `modules/aws-prompt-indicator/README.md` - Module documentation and setup guide
-- `modules/aws-prompt-indicator/aws-prompt-theme.omp.json` - Example oh-my-posh theme
+- `modules/aws-prompt-indicator/AwsPromptIndicator.psm1` - Main PowerShell module (7 exported functions)
+- `modules/aws-prompt-indicator/README.md` - Comprehensive module documentation
+- `modules/aws-prompt-indicator/quick-term-aws.omp.json` - Pre-configured quick-term theme with AWS features
+- `modules/aws-prompt-indicator/aws-prompt-theme.omp.json` - Example oh-my-posh theme template
 - `modules/aws-prompt-indicator/directory-mappings.example.json` - Configuration example
 
-**Integration:**
-- Auto-loads when `awsPromptIndicator.enabled = true` in config.json
-- Sets `$env:AWS_ACCOUNT_MISMATCH` environment variable for theme integration
-- Displays warning message on startup if mismatch detected
-- Parent directory matching (works in subdirectories of mapped paths)
+**PowerShell Profile Integration (Two Lines):**
+```powershell
+Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
+Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json"
+```
+
+**Environment Variables Set:**
+- `$env:AWS_ACCOUNT_MATCH` - "true" when accounts match (enables green indicator)
+- `$env:AWS_ACCOUNT_MISMATCH` - "true" when accounts don't match (enables yellow warning)
+- `$env:AWS_DISPLAY_NAME` - AWS account friendly name or username (for session segment)
 
 **Use Cases:**
 - Prevent accidental deployments to wrong AWS account
+- Always know which AWS account you're logged into at a glance
 - Visual reminder when switching between multiple Terraform workspaces
 - Safety guard for multi-account AWS infrastructure work
+- Works seamlessly with okta-aws-cli authentication workflow
+
+**Performance:**
+- Module initialization: ~20ms (one-time on profile load)
+- Cached account detection: <1ms (typical, 99% of prompts)
+- File change detection: ~3ms (when credentials file updates)
+- AWS CLI fallback: ~1500ms (one-time per authentication, then cached)
 
 **Requirements (Optional):**
 - oh-my-posh (for custom prompt theming)

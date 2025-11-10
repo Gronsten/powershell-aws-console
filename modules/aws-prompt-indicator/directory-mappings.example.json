@@ -1,0 +1,25 @@
+{
+  "awsPromptIndicator": {
+    "directoryMappings": {
+      "C:\\path\\to\\project-alpha\\terraform\\dev": "123456789012",
+      "C:\\path\\to\\project-alpha\\terraform\\prod": "210987654321",
+      "C:\\path\\to\\project-alpha\\terraform\\test": "345678901234",
+      "C:\\path\\to\\project-beta\\terraform\\dev": "456789012345",
+      "C:\\path\\to\\project-beta\\terraform\\prod": "567890123456"
+    }
+  },
+  "_comments": {
+    "directoryMappings": "Map directories to AWS account IDs (12 digits)",
+    "usage": "This module is loaded via PowerShell profile, not cmdprmpt.ps1",
+    "note": "The module will match current directory or any parent directory",
+    "accountIds": {
+      "example-prod": "567890123456",
+      "example-dev": "456789012345",
+      "sample-prod": "210987654321",
+      "sample-dev": "123456789012",
+      "sample-test": "345678901234",
+      "another-prod": "678901234567",
+      "another-staging": "789012345678"
+    }
+  }
+}

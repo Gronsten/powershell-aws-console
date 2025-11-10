@@ -25,6 +25,8 @@
 $script:AwsCredentialsPath = "$env:USERPROFILE\.aws\credentials"
 $script:ConfigPath = $null
 $script:DirectoryMappings = @{}
+$script:ProfileToAccountMap = @{}
+$script:Config = $null
 
 <#
 .SYNOPSIS
@@ -50,15 +52,41 @@ function Initialize-AwsPromptIndicator {
 
     try {
         $script:ConfigPath = $ConfigPath
-        $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+        $script:Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
         # Load directory mappings if they exist
-        if ($config.awsPromptIndicator -and $config.awsPromptIndicator.directoryMappings) {
+        if ($script:Config.awsPromptIndicator -and $script:Config.awsPromptIndicator.directoryMappings) {
             $script:DirectoryMappings = @{}
-            $config.awsPromptIndicator.directoryMappings.PSObject.Properties | ForEach-Object {
+            $script:Config.awsPromptIndicator.directoryMappings.PSObject.Properties | ForEach-Object {
                 $script:DirectoryMappings[$_.Name] = $_.Value
             }
             Write-Verbose "Loaded $($script:DirectoryMappings.Count) directory mappings"
+        }
+
+        # Build profile name to account ID mapping from environments
+        $script:ProfileToAccountMap = @{}
+        if ($script:Config.environments) {
+            $script:Config.environments.PSObject.Properties | ForEach-Object {
+                $envName = $_.Name
+                $envConfig = $_.Value
+
+                if ($envConfig.accountId) {
+                    # Map various profile name formats that okta-aws-cli might use
+                    # Examples: "ets-nettools-prod", "etsnettoolsprod", "etsnettools-prod"
+                    $script:ProfileToAccountMap[$envName] = $envConfig.accountId
+                    $script:ProfileToAccountMap[$envName.Replace("-","")] = $envConfig.accountId
+
+                    # Also try with dashes in different positions
+                    if ($envName -match "^([a-z]+)(nettools|networkhub)(.*)$") {
+                        $prefix = $Matches[1]
+                        $middle = $Matches[2]
+                        $suffix = $Matches[3]
+                        $altName = "$prefix-$middle$suffix"
+                        $script:ProfileToAccountMap[$altName] = $envConfig.accountId
+                    }
+                }
+            }
+            Write-Verbose "Loaded $($script:ProfileToAccountMap.Count) profile-to-account mappings"
         }
 
         return $true
@@ -71,12 +99,13 @@ function Initialize-AwsPromptIndicator {
 
 <#
 .SYNOPSIS
-    Reads the current AWS account ID from active AWS session.
+    Reads the current AWS account ID from credentials file.
 
 .DESCRIPTION
-    Uses AWS CLI's 'sts get-caller-identity' to determine the currently
-    active AWS account. This works with any authentication method (okta-aws-cli,
-    aws sso, aws configure, etc.) and any profile configuration.
+    Parses ~/.aws/credentials to find the most recently updated profile
+    (determined by file modification time or most recent profile in file).
+    Maps the profile name to account ID using the config.json environments.
+    This is fast (no network calls) and works with okta-aws-cli profile naming.
 
 .OUTPUTS
     String - The 12-digit AWS account ID, or $null if not found.
@@ -90,25 +119,40 @@ function Get-CurrentAwsAccountId {
     [OutputType([string])]
     param()
 
-    try {
-        # Use AWS CLI to get current identity (works with any auth method)
-        $identityJson = aws sts get-caller-identity 2>$null
-
-        if ($LASTEXITCODE -eq 0 -and $identityJson) {
-            $identity = $identityJson | ConvertFrom-Json
-            $accountId = $identity.Account
-
-            if ($accountId -match '^\d{12}$') {
-                Write-Verbose "Found AWS account ID from AWS CLI: $accountId"
-                return $accountId
-            }
-        }
-
-        Write-Verbose "No active AWS session found (aws sts get-caller-identity failed)"
+    if (-not (Test-Path $script:AwsCredentialsPath)) {
+        Write-Verbose "AWS credentials file not found: $script:AwsCredentialsPath"
         return $null
     }
+
+    try {
+        $credContent = Get-Content $script:AwsCredentialsPath -Raw
+
+        # Find all profile names in the credentials file
+        $profiles = [regex]::Matches($credContent, '\[([^\]]+)\]') | ForEach-Object { $_.Groups[1].Value }
+
+        if ($profiles.Count -eq 0) {
+            Write-Verbose "No profiles found in credentials file"
+            return $null
+        }
+
+        # Use the last profile in the file (most recently written by okta-aws-cli)
+        $activeProfile = $profiles[-1]
+        Write-Verbose "Active profile from credentials file: $activeProfile"
+
+        # Try to map profile name to account ID
+        $accountId = $script:ProfileToAccountMap[$activeProfile]
+
+        if ($accountId) {
+            Write-Verbose "Mapped profile '$activeProfile' to account: $accountId"
+            return $accountId
+        }
+        else {
+            Write-Verbose "No account mapping found for profile: $activeProfile"
+            return $null
+        }
+    }
     catch {
-        Write-Verbose "Error getting AWS account ID: $_"
+        Write-Verbose "Error reading AWS credentials: $_"
         return $null
     }
 }

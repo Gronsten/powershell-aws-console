@@ -20,6 +20,68 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.3.0 (2025-11-10)
+
+**New Feature - AWS Prompt Indicator Module (Optional)**
+
+Added optional PowerShell module for displaying visual indicators in oh-my-posh prompts when your current directory's expected AWS account doesn't match your active AWS session.
+
+**Features:**
+- **Directory-to-Account Mapping**: Configure which AWS accounts are expected for specific working directories
+- **Automatic Detection**: Reads active AWS account from `~/.aws/credentials` (set by okta-aws-cli)
+- **oh-my-posh Integration**: Example theme with custom segment for visual mismatch warnings
+- **Flexible Usage Options**:
+  - oh-my-posh custom segment (recommended)
+  - PowerShell profile function integration
+  - Direct module function calls for custom implementations
+- **Zero Impact When Disabled**: Feature disabled by default, opt-in via config.json
+- **Comprehensive Documentation**: Dedicated README with setup instructions, examples, and troubleshooting
+
+**Module Functions:**
+- `Initialize-AwsPromptIndicator`: Load configuration and directory mappings
+- `Get-CurrentAwsAccountId`: Read active AWS account from credentials file
+- `Get-ExpectedAwsAccountId`: Determine expected account for current directory
+- `Test-AwsAccountMismatch`: Compare current and expected accounts
+- `Get-AwsPromptIndicator`: Simple text indicator for custom prompts
+- `Get-AwsPromptSegmentData`: JSON data for oh-my-posh segments
+
+**Configuration:**
+```json
+{
+  "awsPromptIndicator": {
+    "enabled": false,
+    "directoryMappings": {
+      "C:\\AppInstall\\dev\\entity-network-hub": "054427526671",
+      "C:\\AppInstall\\dev\\ets-nettools": "041457850300"
+    }
+  }
+}
+```
+
+**Files Added:**
+- `modules/aws-prompt-indicator/AwsPromptIndicator.psm1` - Main PowerShell module
+- `modules/aws-prompt-indicator/README.md` - Module documentation and setup guide
+- `modules/aws-prompt-indicator/aws-prompt-theme.omp.json` - Example oh-my-posh theme
+- `modules/aws-prompt-indicator/directory-mappings.example.json` - Configuration example
+
+**Integration:**
+- Auto-loads when `awsPromptIndicator.enabled = true` in config.json
+- Sets `$env:AWS_ACCOUNT_MISMATCH` environment variable for theme integration
+- Displays warning message on startup if mismatch detected
+- Parent directory matching (works in subdirectories of mapped paths)
+
+**Use Cases:**
+- Prevent accidental deployments to wrong AWS account
+- Visual reminder when switching between multiple Terraform workspaces
+- Safety guard for multi-account AWS infrastructure work
+
+**Requirements (Optional):**
+- oh-my-posh (for custom prompt theming)
+- posh-git (optional, for git integration)
+- okta-aws-cli (for AWS authentication)
+
+See [modules/aws-prompt-indicator/README.md](modules/aws-prompt-indicator/README.md) for full setup instructions.
+
 ### v1.2.4 (2025-11-05)
 
 **Bug Fixes - Path Resolution**

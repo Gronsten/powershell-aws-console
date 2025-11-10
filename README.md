@@ -10,6 +10,12 @@ A comprehensive, interactive PowerShell management console for AWS infrastructur
 - **Okta SSO Integration**: Automated authentication using okta-aws-cli with configurable session durations
 - **Account Synchronization**: One-click sync to discover all AWS accounts and roles from Okta
 - **Persistent Configuration**: Customizable menu order and display names saved to config.json
+- **AWS Prompt Indicator (Optional Module)**:
+  - Visual warning when working directory's expected AWS account doesn't match active session
+  - oh-my-posh theme integration for seamless prompt customization
+  - Configurable directory-to-account mappings
+  - Zero performance impact when disabled (default)
+  - See [modules/aws-prompt-indicator/README.md](modules/aws-prompt-indicator/README.md) for setup
 
 ### EC2 Instance Management
 - **Interactive Instance Selection**: Arrow-key navigation for browsing running EC2 instances

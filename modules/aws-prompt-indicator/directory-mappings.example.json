@@ -1,0 +1,25 @@
+{
+  "awsPromptIndicator": {
+    "enabled": true,
+    "directoryMappings": {
+      "C:\\AppInstall\\dev\\entity-network-hub": "054427526671",
+      "C:\\AppInstall\\dev\\ets-nettools": "041457850300",
+      "C:\\AppInstall\\dev\\terraform\\production": "041457850300",
+      "C:\\AppInstall\\dev\\terraform\\development": "434843203441"
+    }
+  },
+  "_comments": {
+    "enabled": "Set to true to enable AWS account mismatch detection",
+    "directoryMappings": "Map directories to AWS account IDs (12 digits)",
+    "note": "The module will match current directory or any parent directory",
+    "accountIds": {
+      "etsnettoolsprod": "041457850300",
+      "etsnettoolsdev": "434843203441",
+      "entitynetworkhubprod": "054427526671",
+      "entitynetworkhubdev": "883896345475",
+      "entitynetworkhubtest": "519357217272",
+      "cfawebsgprod": "960631463868",
+      "cfawebukprod": "753807627141"
+    }
+  }
+}

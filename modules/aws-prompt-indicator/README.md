@@ -78,13 +78,53 @@ aws sts get-caller-identity
 
 ### Option 1: oh-my-posh Custom Segment (Recommended)
 
-The module includes an example oh-my-posh theme configuration. See [aws-prompt-theme.omp.json](./aws-prompt-theme.omp.json).
+#### Quick Start with quick-term Theme
 
-1. **Copy the custom segment** from the example theme to your existing oh-my-posh config
-2. **Customize colors and icons** to match your preference
-3. **Reload your prompt**: `exec pwsh` or restart PowerShell
+If you're using the `quick-term` theme, we've created a pre-configured version for you:
 
-The AWS indicator will automatically appear in your prompt when there's a mismatch.
+**File**: [quick-term-aws.omp.json](./quick-term-aws.omp.json)
+
+This is your existing `quick-term` theme with the AWS mismatch indicator added to the right side of the prompt (between execution time and clock).
+
+**To use it**:
+
+1. **Update your PowerShell profile** to use the new theme:
+   ```powershell
+   # Open your profile
+   code $PROFILE
+
+   # Change the oh-my-posh init line to:
+   oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
+   ```
+
+2. **Reload PowerShell**:
+   ```powershell
+   . $PROFILE
+   ```
+
+3. **Test it**: Navigate to a mapped directory and the indicator will show if there's a mismatch!
+
+**What you'll see**:
+- **Normal (match)**: Your usual prompt - clean and unchanged
+- **Mismatch**: `⚠️ AWS MISMATCH` appears in yellow between execution time and clock
+
+#### Custom Theme Integration
+
+For other oh-my-posh themes, add this segment to your theme's right-side prompt block:
+
+```json
+{
+  "background": "#d7af00",
+  "foreground": "#121318",
+  "invert_powerline": true,
+  "style": "diamond",
+  "leading_diamond": "\ue0b2",
+  "template": "{{ if eq .Env.AWS_ACCOUNT_MISMATCH \"true\" }} \u26a0\ufe0f AWS MISMATCH {{ end }}",
+  "type": "text"
+}
+```
+
+See [aws-prompt-theme.omp.json](./aws-prompt-theme.omp.json) for another example theme configuration.
 
 ### Option 2: Manual Check
 

@@ -82,83 +82,31 @@ The best way to use this module is to load it in your PowerShell profile so it's
 **Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
 
 ```powershell
-# AWS Prompt Indicator - Load module for AWS account mismatch detection
-try {
-    Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking -ErrorAction Stop
-    $initResult = Initialize-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -ErrorAction Stop
-
-    if ($initResult) {
-        # Function to update AWS mismatch status and account display
-        function Update-AwsMismatchStatus {
-            $status = Test-AwsAccountMismatch
-            $currentAccountId = Get-CurrentAwsAccountId
-
-            # Set mismatch status for oh-my-posh theme
-            if ($status.HasMismatch) {
-                $env:AWS_ACCOUNT_MISMATCH = "true"
-                $env:AWS_ACCOUNT_MATCH = "false"
-            } elseif ($currentAccountId) {
-                $env:AWS_ACCOUNT_MISMATCH = "false"
-                $env:AWS_ACCOUNT_MATCH = "true"
-            } else {
-                $env:AWS_ACCOUNT_MISMATCH = "false"
-                $env:AWS_ACCOUNT_MATCH = "false"
-            }
-
-            # Set display name for session segment (falls back to username if not logged into AWS)
-            if ($currentAccountId) {
-                $configPath = "C:\AppInstall\dev\powershell-console\config.json"
-                $config = Get-Content $configPath -Raw | ConvertFrom-Json
-
-                # Find friendly name from config environments
-                $friendlyName = $null
-                foreach ($env in $config.environments.PSObject.Properties) {
-                    if ($env.Value.accountId -eq $currentAccountId) {
-                        $friendlyName = if ($env.Value.displayName) { $env.Value.displayName } else { $env.Name }
-                        break
-                    }
-                }
-
-                $env:AWS_DISPLAY_NAME = if ($friendlyName) { $friendlyName } else { $currentAccountId }
-            } else {
-                $env:AWS_DISPLAY_NAME = $env:USERNAME
-            }
-        }
-
-        # Update on profile load
-        Update-AwsMismatchStatus
-
-        # Hook into prompt to update on directory change
-        $global:AwsPromptIndicatorEnabled = $true
-    }
-} catch {
-    # Silently fail if module not available
-    $global:AwsPromptIndicatorEnabled = $false
-    $env:AWS_DISPLAY_NAME = $env:USERNAME
-}
-
-# Load oh-my-posh with AWS-enabled theme
-oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
-
-# Override the prompt function to update AWS status before oh-my-posh renders
-$originalPrompt = $function:prompt
-function prompt {
-    # Update AWS mismatch status before oh-my-posh renders the prompt
-    if ($global:AwsPromptIndicatorEnabled) {
-        Update-AwsMismatchStatus
-    }
-
-    # Call the original oh-my-posh prompt
-    & $originalPrompt
-}
+# AWS Prompt Indicator - One-line integration
+Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
+Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json"
 ```
 
-**Important:** The prompt override must come AFTER oh-my-posh initialization so we can wrap the oh-my-posh prompt function.
+That's it! The `Enable-AwsPromptIndicator` function handles everything:
+- Initializes the module with your config
+- Sets up environment variables for AWS account tracking
+- Integrates with oh-my-posh theme (if provided)
+- Wraps your prompt to update on every directory change
+- Falls back gracefully if AWS credentials aren't available
+
+**If you initialize oh-my-posh separately**, omit the `-OhMyPoshTheme` parameter:
+
+```powershell
+Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
+oh-my-posh init pwsh --config 'C:\your\theme.omp.json' | Invoke-Expression
+Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json"
+```
 
 **Benefits of this approach:**
 - ✅ Works in ALL PowerShell sessions (not just cmdprmpt.ps1)
 - ✅ Updates automatically when you change directories
 - ✅ Updates automatically when you authenticate to AWS
+- ✅ Simple two-line setup - all logic contained in the module
 - ✅ No need to restart PowerShell - just `. $PROFILE`
 
 ### Option 1: oh-my-posh Custom Segment

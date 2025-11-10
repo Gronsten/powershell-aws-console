@@ -373,6 +373,118 @@ function Get-AwsPromptIndicator {
     return ""
 }
 
+<#
+.SYNOPSIS
+    Enables AWS prompt indicator integration for PowerShell profiles.
+
+.DESCRIPTION
+    This function sets up the AWS prompt indicator for use in PowerShell profiles.
+    It initializes the module, creates the update function, and sets up prompt wrapping
+    for oh-my-posh integration.
+
+.PARAMETER ConfigPath
+    Path to the powershell-console config.json file.
+
+.PARAMETER OhMyPoshTheme
+    Optional path to oh-my-posh theme. If not provided, oh-my-posh initialization is skipped.
+
+.EXAMPLE
+    Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json"
+
+.EXAMPLE
+    # Without oh-my-posh (if you initialize it separately)
+    Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json"
+#>
+function Enable-AwsPromptIndicator {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$OhMyPoshTheme
+    )
+
+    try {
+        # Initialize the module
+        $initResult = Initialize-AwsPromptIndicator -ConfigPath $ConfigPath -ErrorAction Stop
+
+        if ($initResult) {
+            # Create the update function in global scope
+            $global:AwsPromptIndicatorUpdateFunction = {
+                $status = Test-AwsAccountMismatch
+                $currentAccountId = Get-CurrentAwsAccountId
+                $expectedAccountId = Get-ExpectedAwsAccountId
+
+                # Set mismatch status for oh-my-posh theme
+                # Only show indicators when in a mapped directory
+                if ($expectedAccountId) {
+                    if ($status.HasMismatch) {
+                        $env:AWS_ACCOUNT_MISMATCH = "true"
+                        $env:AWS_ACCOUNT_MATCH = "false"
+                    } elseif ($currentAccountId) {
+                        $env:AWS_ACCOUNT_MISMATCH = "false"
+                        $env:AWS_ACCOUNT_MATCH = "true"
+                    } else {
+                        # In mapped directory but not logged into AWS
+                        $env:AWS_ACCOUNT_MISMATCH = "false"
+                        $env:AWS_ACCOUNT_MATCH = "false"
+                    }
+                } else {
+                    # Not in a mapped directory - hide indicators
+                    $env:AWS_ACCOUNT_MISMATCH = "false"
+                    $env:AWS_ACCOUNT_MATCH = "false"
+                }
+
+                # Set display name for session segment (falls back to username if not logged into AWS)
+                if ($currentAccountId) {
+                    $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+
+                    # Find friendly name from config environments
+                    $friendlyName = $null
+                    foreach ($env in $config.environments.PSObject.Properties) {
+                        if ($env.Value.accountId -eq $currentAccountId) {
+                            $friendlyName = if ($env.Value.displayName) { $env.Value.displayName } else { $env.Name }
+                            break
+                        }
+                    }
+
+                    $env:AWS_DISPLAY_NAME = if ($friendlyName) { $friendlyName } else { $currentAccountId }
+                } else {
+                    $env:AWS_DISPLAY_NAME = $env:USERNAME
+                }
+            }
+
+            # Run initial update
+            & $global:AwsPromptIndicatorUpdateFunction
+
+            # Initialize oh-my-posh if theme provided
+            if ($OhMyPoshTheme -and (Test-Path $OhMyPoshTheme)) {
+                oh-my-posh init pwsh --config $OhMyPoshTheme | Invoke-Expression
+            }
+
+            # Wrap the prompt function to update AWS status
+            $originalPrompt = $function:prompt
+            $function:global:prompt = {
+                # Update AWS status before rendering prompt
+                & $global:AwsPromptIndicatorUpdateFunction
+
+                # Call the original prompt
+                & $originalPrompt
+            }.GetNewClosure()
+
+            Write-Host "✓ AWS Prompt Indicator enabled" -ForegroundColor Green
+            return $true
+        }
+    }
+    catch {
+        Write-Warning "Failed to enable AWS Prompt Indicator: $_"
+        # Set fallback
+        $env:AWS_DISPLAY_NAME = $env:USERNAME
+        return $false
+    }
+}
+
 # Export module functions
 Export-ModuleMember -Function @(
     'Initialize-AwsPromptIndicator',
@@ -380,5 +492,6 @@ Export-ModuleMember -Function @(
     'Get-ExpectedAwsAccountId',
     'Test-AwsAccountMismatch',
     'Get-AwsPromptSegmentData',
-    'Get-AwsPromptIndicator'
+    'Get-AwsPromptIndicator',
+    'Enable-AwsPromptIndicator'
 )

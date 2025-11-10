@@ -71,11 +71,12 @@ function Initialize-AwsPromptIndicator {
 
 <#
 .SYNOPSIS
-    Reads the current AWS account ID from credentials file.
+    Reads the current AWS account ID from active AWS session.
 
 .DESCRIPTION
-    Parses ~/.aws/credentials to find the [default] profile and extracts
-    the account ID from the IAM role ARN set by okta-aws-cli.
+    Uses AWS CLI's 'sts get-caller-identity' to determine the currently
+    active AWS account. This works with any authentication method (okta-aws-cli,
+    aws sso, aws configure, etc.) and any profile configuration.
 
 .OUTPUTS
     String - The 12-digit AWS account ID, or $null if not found.
@@ -89,31 +90,25 @@ function Get-CurrentAwsAccountId {
     [OutputType([string])]
     param()
 
-    if (-not (Test-Path $script:AwsCredentialsPath)) {
-        Write-Verbose "AWS credentials file not found: $script:AwsCredentialsPath"
-        return $null
-    }
-
     try {
-        $credContent = Get-Content $script:AwsCredentialsPath -Raw
+        # Use AWS CLI to get current identity (works with any auth method)
+        $identityJson = aws sts get-caller-identity 2>$null
 
-        # Find the [default] profile section
-        if ($credContent -match '\[default\][\s\S]*?aws_session_token\s*=') {
-            $defaultSection = $Matches[0]
+        if ($LASTEXITCODE -eq 0 -and $identityJson) {
+            $identity = $identityJson | ConvertFrom-Json
+            $accountId = $identity.Account
 
-            # Look for role ARN pattern: arn:aws:iam::123456789012:role/RoleName
-            if ($defaultSection -match 'arn:aws:iam::(\d{12}):') {
-                $accountId = $Matches[1]
-                Write-Verbose "Found AWS account ID: $accountId"
+            if ($accountId -match '^\d{12}$') {
+                Write-Verbose "Found AWS account ID from AWS CLI: $accountId"
                 return $accountId
             }
         }
 
-        Write-Verbose "No AWS account ID found in credentials file"
+        Write-Verbose "No active AWS session found (aws sts get-caller-identity failed)"
         return $null
     }
     catch {
-        Write-Warning "Error reading AWS credentials: $_"
+        Write-Verbose "Error getting AWS account ID: $_"
         return $null
     }
 }

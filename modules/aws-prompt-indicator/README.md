@@ -110,21 +110,23 @@ try {
     $global:AwsPromptIndicatorEnabled = $false
 }
 
-# Custom prompt function that updates AWS status before oh-my-posh renders
+# Load oh-my-posh with AWS-enabled theme
+oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
+
+# Override the prompt function to update AWS status before oh-my-posh renders
+$originalPrompt = $function:prompt
 function prompt {
-    # Update AWS mismatch status before prompt renders
+    # Update AWS mismatch status before oh-my-posh renders the prompt
     if ($global:AwsPromptIndicatorEnabled) {
         Update-AwsMismatchStatus
     }
 
-    # Let oh-my-posh handle the actual prompt rendering
-    # This is a placeholder - oh-my-posh will override it
-    ""
+    # Call the original oh-my-posh prompt
+    & $originalPrompt
 }
-
-# Load oh-my-posh with AWS-enabled theme (AFTER the prompt function)
-oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
 ```
+
+**Important:** The prompt override must come AFTER oh-my-posh initialization so we can wrap the oh-my-posh prompt function.
 
 **Benefits of this approach:**
 - ✅ Works in ALL PowerShell sessions (not just cmdprmpt.ps1)

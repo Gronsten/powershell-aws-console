@@ -2,10 +2,11 @@
   "awsPromptIndicator": {
     "enabled": true,
     "directoryMappings": {
-      "C:\\AppInstall\\dev\\entity-network-hub": "054427526671",
-      "C:\\AppInstall\\dev\\ets-nettools": "041457850300",
-      "C:\\AppInstall\\dev\\terraform\\production": "041457850300",
-      "C:\\AppInstall\\dev\\terraform\\development": "434843203441"
+      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubdev": "883896345475",
+      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubprod": "054427526671",
+      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubtest": "519357217272",
+      "C:\\AppInstall\\dev\\ets-nettools\\terraform\\etsnettoolsdev": "434843203441",
+      "C:\\AppInstall\\dev\\ets-nettools\\terraform\\etsnettoolsprod": "041457850300"
     }
   },
   "_comments": {

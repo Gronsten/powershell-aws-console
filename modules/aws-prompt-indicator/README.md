@@ -76,7 +76,63 @@ aws sts get-caller-identity
 
 ## Usage
 
-### Option 1: oh-my-posh Custom Segment (Recommended)
+### Recommended: PowerShell Profile Integration (Always Active)
+
+The best way to use this module is to load it in your PowerShell profile so it's always available, not just when running cmdprmpt.ps1.
+
+**Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
+
+```powershell
+# AWS Prompt Indicator - Load module for AWS account mismatch detection
+try {
+    Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking -ErrorAction Stop
+    $initResult = Initialize-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -ErrorAction Stop
+
+    if ($initResult) {
+        # Function to update AWS mismatch status
+        function Update-AwsMismatchStatus {
+            $status = Test-AwsAccountMismatch
+            if ($status.HasMismatch) {
+                $env:AWS_ACCOUNT_MISMATCH = "true"
+            } else {
+                $env:AWS_ACCOUNT_MISMATCH = "false"
+            }
+        }
+
+        # Update on profile load
+        Update-AwsMismatchStatus
+
+        # Hook into prompt to update on directory change
+        $global:AwsPromptIndicatorEnabled = $true
+    }
+} catch {
+    # Silently fail if module not available
+    $global:AwsPromptIndicatorEnabled = $false
+}
+
+# Custom prompt function that updates AWS status before oh-my-posh renders
+function prompt {
+    # Update AWS mismatch status before prompt renders
+    if ($global:AwsPromptIndicatorEnabled) {
+        Update-AwsMismatchStatus
+    }
+
+    # Let oh-my-posh handle the actual prompt rendering
+    # This is a placeholder - oh-my-posh will override it
+    ""
+}
+
+# Load oh-my-posh with AWS-enabled theme (AFTER the prompt function)
+oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
+```
+
+**Benefits of this approach:**
+- ✅ Works in ALL PowerShell sessions (not just cmdprmpt.ps1)
+- ✅ Updates automatically when you change directories
+- ✅ Updates automatically when you authenticate to AWS
+- ✅ No need to restart PowerShell - just `. $PROFILE`
+
+### Option 1: oh-my-posh Custom Segment
 
 #### Quick Start with quick-term Theme
 
@@ -86,23 +142,7 @@ If you're using the `quick-term` theme, we've created a pre-configured version f
 
 This is your existing `quick-term` theme with the AWS mismatch indicator added to the right side of the prompt (between execution time and clock).
 
-**To use it**:
-
-1. **Update your PowerShell profile** to use the new theme:
-   ```powershell
-   # Open your profile
-   code $PROFILE
-
-   # Change the oh-my-posh init line to:
-   oh-my-posh init pwsh --config 'C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json' | Invoke-Expression
-   ```
-
-2. **Reload PowerShell**:
-   ```powershell
-   . $PROFILE
-   ```
-
-3. **Test it**: Navigate to a mapped directory and the indicator will show if there's a mismatch!
+See the **PowerShell Profile Integration** section above for the recommended setup that includes both the module loading and theme configuration.
 
 **What you'll see**:
 - **Normal (match)**: Your usual prompt - clean and unchanged

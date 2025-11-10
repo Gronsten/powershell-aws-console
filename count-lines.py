@@ -156,8 +156,10 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     print("="*70)
 
 if __name__ == '__main__':
-    # Dev root for exclusion rules
-    dev_root = Path(r'C:\AppInstall\dev')
+    # Dev root for exclusion rules - auto-detect from script location or use current directory
+    # Assumes script is in a project directory under your dev root
+    script_dir = Path(__file__).resolve().parent
+    dev_root = script_dir.parent if script_dir.parent.name != script_dir.name else script_dir
 
     # Parse command line arguments
     if len(sys.argv) > 1:

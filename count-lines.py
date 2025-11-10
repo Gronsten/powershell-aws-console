@@ -40,21 +40,26 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
         elif project == 'e911':
             return True
 
-        # mcampbel@192.168.7.202: exclude all
-        elif project == 'mcampbel@192.168.7.202':
-            return True
+        # Example: exclude all files from a specific project
+        # elif project == 'username@server':
+        #     return True
 
-        # entity-network-hub: only include vpn.tf explicitly
-        elif project == 'entity-network-hub':
-            if file_path.name != 'vpn.tf':
-                return True
+        # Example: only include specific file in a project
+        # elif project == 'your-project-name':
+        #     if file_path.name != 'specific-file.tf':
+        #         return True
 
-        # ets-nettools: exclude dev environment subdirectory
-        elif project == 'ets-nettools':
-            if 'etsnettoolsdev' in parts:
-                return True
+        # Example: exclude dev environment subdirectory
+        # elif project == 'another-project':
+        #     if 'dev-environment' in parts:
+        #         return True
 
-        # meraki-api: exclude backups and logs directories
+        # Example: exclude backups and logs directories
+        # elif project == 'api-project':
+        #     if 'backups' in parts or 'logs' in parts or "config" in parts:
+        #         return True
+
+        # meraki-api: exclude backups, logs, and config directories
         elif project == 'meraki-api':
             if 'backups' in parts or 'logs' in parts or "config" in parts:
                 return True
@@ -156,8 +161,10 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     print("="*70)
 
 if __name__ == '__main__':
-    # Dev root for exclusion rules
-    dev_root = Path(r'C:\AppInstall\dev')
+    # Dev root for exclusion rules - auto-detect from script location or use current directory
+    # Assumes script is in a project directory under your dev root
+    script_dir = Path(__file__).resolve().parent
+    dev_root = script_dir.parent if script_dir.parent.name != script_dir.name else script_dir
 
     # Parse command line arguments
     if len(sys.argv) > 1:

@@ -40,24 +40,24 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
         elif project == 'e911':
             return True
 
-        # mcampbel@192.168.7.202: exclude all
-        elif project == 'mcampbel@192.168.7.202':
-            return True
+        # Example: exclude all files from a specific project
+        # elif project == 'username@server':
+        #     return True
 
-        # entity-network-hub: only include vpn.tf explicitly
-        elif project == 'entity-network-hub':
-            if file_path.name != 'vpn.tf':
-                return True
+        # Example: only include specific file in a project
+        # elif project == 'your-project-name':
+        #     if file_path.name != 'specific-file.tf':
+        #         return True
 
-        # ets-nettools: exclude dev environment subdirectory
-        elif project == 'ets-nettools':
-            if 'etsnettoolsdev' in parts:
-                return True
+        # Example: exclude dev environment subdirectory
+        # elif project == 'another-project':
+        #     if 'dev-environment' in parts:
+        #         return True
 
-        # meraki-api: exclude backups and logs directories
-        elif project == 'meraki-api':
-            if 'backups' in parts or 'logs' in parts or "config" in parts:
-                return True
+        # Example: exclude backups and logs directories
+        # elif project == 'api-project':
+        #     if 'backups' in parts or 'logs' in parts or "config" in parts:
+        #         return True
 
         # misc-scripts: exclude specific files
         elif project == 'misc-scripts':

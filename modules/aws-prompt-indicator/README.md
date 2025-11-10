@@ -90,9 +90,9 @@ The best way to use this module is to load it in your PowerShell profile so it's
 **Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
 
 ```powershell
-# AWS Prompt Indicator - One-line integration
+# AWS Prompt Indicator - Simple two-line integration
 Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
-Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json"
+Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json" | Out-Null
 ```
 
 That's it! The `Enable-AwsPromptIndicator` function handles everything:
@@ -107,7 +107,7 @@ That's it! The `Enable-AwsPromptIndicator` function handles everything:
 ```powershell
 Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
 oh-my-posh init pwsh --config 'C:\your\theme.omp.json' | Invoke-Expression
-Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json"
+Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" | Out-Null
 ```
 
 **Benefits of this approach:**

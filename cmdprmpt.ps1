@@ -272,44 +272,6 @@ function Get-AwsAccountCustomName {
 
 $script:Config = Import-Configuration
 
-# ==========================================
-# AWS PROMPT INDICATOR MODULE (OPTIONAL)
-# ==========================================
-
-# Load AWS Prompt Indicator module if enabled
-if ($script:Config.awsPromptIndicator -and $script:Config.awsPromptIndicator.enabled) {
-    $awsPromptModulePath = Join-Path $PSScriptRoot "modules\aws-prompt-indicator\AwsPromptIndicator.psm1"
-
-    if (Test-Path $awsPromptModulePath) {
-        try {
-            Import-Module $awsPromptModulePath -Force -DisableNameChecking
-            $configPath = Join-Path $PSScriptRoot "config.json"
-            $initResult = Initialize-AwsPromptIndicator -ConfigPath $configPath
-
-            if ($initResult) {
-                Write-Host "✓ AWS Prompt Indicator module loaded" -ForegroundColor Green
-
-                # Set environment variable for oh-my-posh theme integration
-                $status = Test-AwsAccountMismatch
-                if ($status.HasMismatch) {
-                    $env:AWS_ACCOUNT_MISMATCH = "true"
-                    Write-Host "⚠️  AWS Account Mismatch Detected!" -ForegroundColor Yellow
-                    Write-Host "   Current:  $($status.CurrentAccount)" -ForegroundColor Red
-                    Write-Host "   Expected: $($status.ExpectedAccount)" -ForegroundColor Green
-                } else {
-                    $env:AWS_ACCOUNT_MISMATCH = "false"
-                }
-            }
-        }
-        catch {
-            Write-Warning "Failed to load AWS Prompt Indicator module: $_"
-        }
-    }
-    else {
-        Write-Warning "AWS Prompt Indicator enabled but module not found: $awsPromptModulePath"
-    }
-}
-
 # Global variables for connection state
 $global:awsInstance = ""
 $global:remoteIP = ""

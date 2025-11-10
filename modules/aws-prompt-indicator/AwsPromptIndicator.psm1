@@ -74,12 +74,12 @@ function Initialize-AwsPromptIndicator {
 
                 if ($envConfig.accountId) {
                     # Map various profile name formats that okta-aws-cli might use
-                    # Examples: "ets-nettools-prod", "etsnettoolsprod", "etsnettools-prod"
+                    # Examples: "myproject-prod", "myprojectprod", "my-project-prod"
                     $script:ProfileToAccountMap[$envName] = $envConfig.accountId
                     $script:ProfileToAccountMap[$envName.Replace("-","")] = $envConfig.accountId
 
-                    # Also try with dashes in different positions
-                    if ($envName -match "^([a-z]+)(nettools|networkhub)(.*)$") {
+                    # Also try with dashes in different positions for compound names
+                    if ($envName -match "^([a-z]+)([a-z]+)(.*)$") {
                         $prefix = $Matches[1]
                         $middle = $Matches[2]
                         $suffix = $Matches[3]
@@ -114,7 +114,7 @@ function Initialize-AwsPromptIndicator {
 
 .EXAMPLE
     $accountId = Get-CurrentAwsAccountId
-    # Returns: "041457850300"
+    # Returns: "123456789012"
 #>
 function Get-CurrentAwsAccountId {
     [CmdletBinding()]

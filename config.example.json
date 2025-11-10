@@ -182,11 +182,17 @@
   },
   "awsAccountMenuOrder": [],
   "awsPromptIndicator": {
-    "enabled": false,
     "directoryMappings": {
       "C:\\path\\to\\project1": "123456789012",
       "C:\\path\\to\\project2": "987654321098"
     },
-    "_comment": "Enable this module to show visual warnings when current directory's expected AWS account doesn't match active session. Set enabled=true and map your directories to AWS account IDs. See modules/aws-prompt-indicator/README.md for setup."
+    "_comments": {
+      "directoryMappings": "Map directories to their expected AWS account IDs (12 digits)",
+      "usage": "This module is loaded via PowerShell profile, not cmdprmpt.ps1",
+      "credentialsFile": "The module reads from your AWS credentials file (default: %USERPROFILE%\\.aws\\credentials)",
+      "customPath": "If your AWS credentials file is in a non-standard location, you can modify the module to use a custom path",
+      "oktaIntegration": "Works with okta-aws-cli which updates the [default] profile in credentials file",
+      "setup": "See modules/aws-prompt-indicator/README.md for complete setup instructions and PowerShell profile integration"
+    }
   }
 }

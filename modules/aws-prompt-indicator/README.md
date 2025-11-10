@@ -38,11 +38,10 @@ Edit `config.json` in the powershell-console root directory:
 ```json
 {
   "awsPromptIndicator": {
-    "enabled": true,
     "directoryMappings": {
-      "C:\\AppInstall\\dev\\entity-network-hub": "054427526671",
-      "C:\\AppInstall\\dev\\ets-nettools": "041457850300",
-      "C:\\AppInstall\\dev\\terraform": "041457850300"
+      "C:\\path\\to\\project-alpha": "123456789012",
+      "C:\\path\\to\\project-beta": "210987654321",
+      "C:\\path\\to\\terraform-shared": "123456789012"
     }
   }
 }
@@ -57,15 +56,15 @@ Map your working directories to their expected AWS account IDs:
 
 The module will match the current directory or any parent directory in the tree.
 
-**Example**: If you're in `C:\AppInstall\dev\ets-nettools\terraform\modules\vpc`, the module will match the `C:\AppInstall\dev\ets-nettools` mapping.
+**Example**: If you're in `C:\path\to\project-alpha\terraform\modules\vpc`, the module will match the `C:\path\to\project-alpha` mapping.
 
 ### 3. Finding AWS Account IDs
 
 Account IDs are available in your `config.json` under the `environments` section:
 
 ```json
-"etsnettoolsprod": {
-  "accountId": "041457850300"
+"myprojectprod": {
+  "accountId": "123456789012"
 }
 ```
 
@@ -328,21 +327,21 @@ The module reads from disk on each prompt render. If you experience slowness:
 ### Example: Mismatch Warning
 
 ```
-C:\AppInstall\dev\ets-nettools> # Logged into account 054427526671
-⚠️  AWS: 054427526671 (expected: 041457850300)
+C:\path\to\project-alpha> # Logged into account 210987654321
+⚠️  AWS: 210987654321 (expected: 123456789012)
 ```
 
 ### Example: Matching Accounts
 
 ```
-C:\AppInstall\dev\ets-nettools> # Logged into account 041457850300
-✓ AWS: 041457850300
+C:\path\to\project-alpha> # Logged into account 123456789012
+✓ AWS: 123456789012
 ```
 
 ### Example: No Mapping
 
 ```
-C:\Users\mark> # Logged into account 041457850300
+C:\Users\username> # Logged into account 123456789012
 # No indicator shown (directory not mapped)
 ```
 

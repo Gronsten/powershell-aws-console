@@ -1,26 +1,25 @@
 {
   "awsPromptIndicator": {
-    "enabled": true,
     "directoryMappings": {
-      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubdev": "883896345475",
-      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubprod": "054427526671",
-      "C:\\AppInstall\\dev\\entity-network-hub\\terraform\\entitynetworkhubtest": "519357217272",
-      "C:\\AppInstall\\dev\\ets-nettools\\terraform\\etsnettoolsdev": "434843203441",
-      "C:\\AppInstall\\dev\\ets-nettools\\terraform\\etsnettoolsprod": "041457850300"
+      "C:\\path\\to\\project-alpha\\terraform\\dev": "123456789012",
+      "C:\\path\\to\\project-alpha\\terraform\\prod": "210987654321",
+      "C:\\path\\to\\project-alpha\\terraform\\test": "345678901234",
+      "C:\\path\\to\\project-beta\\terraform\\dev": "456789012345",
+      "C:\\path\\to\\project-beta\\terraform\\prod": "567890123456"
     }
   },
   "_comments": {
-    "enabled": "Set to true to enable AWS account mismatch detection",
     "directoryMappings": "Map directories to AWS account IDs (12 digits)",
+    "usage": "This module is loaded via PowerShell profile, not cmdprmpt.ps1",
     "note": "The module will match current directory or any parent directory",
     "accountIds": {
-      "etsnettoolsprod": "041457850300",
-      "etsnettoolsdev": "434843203441",
-      "entitynetworkhubprod": "054427526671",
-      "entitynetworkhubdev": "883896345475",
-      "entitynetworkhubtest": "519357217272",
-      "cfawebsgprod": "960631463868",
-      "cfawebukprod": "753807627141"
+      "example-prod": "567890123456",
+      "example-dev": "456789012345",
+      "sample-prod": "210987654321",
+      "sample-dev": "123456789012",
+      "sample-test": "345678901234",
+      "another-prod": "678901234567",
+      "another-staging": "789012345678"
     }
   }
 }

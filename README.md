@@ -10,13 +10,18 @@ A comprehensive, interactive PowerShell management console for AWS infrastructur
 - **Okta SSO Integration**: Automated authentication using okta-aws-cli with configurable session durations
 - **Account Synchronization**: One-click sync to discover all AWS accounts and roles from Okta
 - **Persistent Configuration**: Customizable menu order and display names saved to config.json
+- **AWS Logout Script**: Clean logout from okta-aws-cli sessions
+  - Clears `[default]` profile credentials from `~/.aws/credentials`
+  - Preserves all other profiles
+  - Automatic backup with error recovery
+  - Usage: `.\scripts\aws-logout.ps1`
 - **AWS Prompt Indicator (Optional Module)**:
   - **Smart session display** - Shows AWS account friendly name in prompt (falls back to username)
-  - **Visual indicators** - Green checkmark on match, yellow warning on mismatch
+  - **Visual indicators** - Bright green checkmark on match, bright red warning on mismatch
   - **Context-aware** - Indicators only appear in directories mapped to AWS accounts
   - **oh-my-posh theme integration** - Pre-configured quick-term theme with AWS features
   - **Simple setup** - Two-line PowerShell profile integration
-  - **Performance optimized** - Smart caching (<1ms typical)
+  - **Performance optimized** - Smart caching (<1ms typical, no slow prompts when logged out)
   - See [modules/aws-prompt-indicator/README.md](modules/aws-prompt-indicator/README.md) for setup
 
 ### EC2 Instance Management
@@ -142,7 +147,7 @@ Copy-Item config.example.json config.json
 
 4. Run the script:
 ```powershell
-.\cmdprmpt.ps1
+.\console.ps1
 ```
 
 See [SETUP.md](SETUP.md) for detailed configuration instructions.
@@ -151,7 +156,7 @@ See [SETUP.md](SETUP.md) for detailed configuration instructions.
 
 ### First Time Setup
 
-1. **Launch the script**: `.\cmdprmpt.ps1`
+1. **Launch the script**: `.\console.ps1`
 2. **Navigate to AWS Login** from Main Menu
 3. **Select "Sync AWS Accounts from Okta"** to discover all available accounts and roles
 4. **Authenticate with Okta** when prompted (one-time for all accounts)

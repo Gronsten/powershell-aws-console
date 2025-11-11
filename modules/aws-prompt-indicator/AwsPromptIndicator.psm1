@@ -133,8 +133,8 @@ function Get-CurrentAwsAccountId {
         $fileInfo = Get-Item $script:AwsCredentialsPath
         $currentLastModified = $fileInfo.LastWriteTime
 
-        # Use cached value if file hasn't changed
-        if ($script:CredentialsFileLastModified -eq $currentLastModified -and $null -ne $script:CachedAccountId) {
+        # Use cached value if file hasn't changed (cache both valid and null results)
+        if ($script:CredentialsFileLastModified -eq $currentLastModified) {
             Write-Verbose "Using cached account ID: $script:CachedAccountId (file unchanged)"
             return $script:CachedAccountId
         }

@@ -20,6 +20,64 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.3.2 (2025-11-11)
+
+**Main Script Renamed**
+
+Renamed main script from `cmdprmpt.ps1` to `console.ps1` to better align with project name and improve clarity.
+
+**Breaking Change:**
+- Main script renamed: `cmdprmpt.ps1` → `console.ps1`
+- New launch command: `.\console.ps1`
+
+**Action Required for Users:**
+- Update any shortcuts or scripts that reference `cmdprmpt.ps1`
+- Update PowerShell profile functions if you've added custom launch functions
+- Example profile function update:
+  ```powershell
+  function Start-AWSConsole {
+      & "C:\path\to\powershell-console\console.ps1"
+  }
+  ```
+
+**Files Changed:**
+- Renamed: `cmdprmpt.ps1` → `console.ps1`
+- Updated documentation: `README.md`, `SETUP.md`, `CHANGELOG.md`
+- Updated examples: `config.example.json`
+- Updated module documentation: `modules/aws-prompt-indicator/README.md`, `modules/aws-prompt-indicator/directory-mappings.example.json`
+
+**Note**: This rename aligns with the v1.2.3 project rename from `powershell-aws-console` to `powershell-console`, completing the transition to the new project identity.
+
+### v1.3.1 (2025-11-11)
+
+**Performance Fix & New Utility**
+
+Fixed performance issue with AWS Prompt Indicator and added AWS logout script.
+
+**Changes:**
+- **Performance Fix** (AWS Prompt Indicator):
+  - Fixed 1-second prompt delay when AWS credentials are expired/logged out
+  - Modified cache logic to cache both valid and null results
+  - Changed line 137 in `Get-CurrentAwsAccountId` to remove `&& $null -ne $script:CachedAccountId` condition
+  - Result: Fast prompts (<1ms) even when logged out, one-time delay (~1s) only on first prompt after logout
+- **New Script**: `scripts/aws-logout.ps1`
+  - Provides clean logout functionality for okta-aws-cli
+  - Clears only `[default]` profile credentials from `~/.aws/credentials`
+  - Preserves all other profiles
+  - Creates automatic backup before modification
+  - Error handling with backup restoration on failure
+- **Visual Improvements** (AWS Prompt Indicator):
+  - Match indicator: Bright green background (`#378504`) with Font Awesome checkmark ()
+  - Mismatch indicator: Bright red background (`#c62828`) with warning emoji (⚠️)
+  - Uses colors consistent with git status theme
+
+**Files Changed:**
+- `modules/aws-prompt-indicator/AwsPromptIndicator.psm1` (1 line fix)
+- `modules/aws-prompt-indicator/quick-term-aws.omp.json` (color updates)
+- `scripts/aws-logout.ps1` (new file, 86 lines)
+- `scripts/README.md` (new documentation)
+- `README.md` (updated features list)
+
 ### v1.3.0 (2025-11-10)
 
 **New Feature - AWS Prompt Indicator Module (Optional)**
@@ -176,7 +234,7 @@ Fixed two critical issues affecting package search and backup progress tracking.
 - Package metadata API: `https://registry.npmjs.org/<package-name>` for version/description
 - Parallel execution: PowerShell runspaces (lightweight threads) instead of jobs (avoided ~3x performance penalty from job serialization overhead)
 - Backup progress now uses robocopy summary columns: Copied + EXTRAS for both files and directories
-- ~80 lines modified in `cmdprmpt.ps1`, ~15 lines modified in `backup-dev.ps1`
+- ~80 lines modified in main script, ~15 lines modified in `backup-dev.ps1`
 - Added `resources/` directory with README for package list management
 
 ### v1.2.2 (2025-11-04)
@@ -199,7 +257,7 @@ Significantly improved package search functionality with PyPI JSON API integrati
 - Uses `Invoke-RestMethod` to query `https://pypi.org/pypi/<package>/json` API endpoint
 - Tries exact match first, then common naming variations for Python packages
 - Properly handles API errors and provides fallback to installed package search
-- ~100 lines modified in `cmdprmpt.ps1`
+- ~100 lines modified in main script
 
 ### v1.2.1 (2025-11-01)
 
@@ -858,7 +916,7 @@ See [Version History](#version-history) above for complete details of backup-dev
 ### Major Cleanup
 
 **MAJOR CLEANUP - Removed deprecated code and unused functions**:
-- Backup Created: `cmdprmpt.ps1.backup-20251018-060208`
+- Backup Created: main script backup (20251018-060208)
 - Lines Removed: 222 lines (3,812 → 3,590 lines = 5.8% reduction)
 - Functions Removed: 8 functions (51 → 43 functions)
 

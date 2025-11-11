@@ -10,7 +10,7 @@
   },
   "_comments": {
     "directoryMappings": "Map directories to AWS account IDs (12 digits)",
-    "usage": "This module is loaded via PowerShell profile, not cmdprmpt.ps1",
+    "usage": "This module is loaded via PowerShell profile, not console.ps1",
     "note": "The module will match current directory or any parent directory",
     "accountIds": {
       "example-prod": "567890123456",

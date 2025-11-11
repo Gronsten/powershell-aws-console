@@ -8,15 +8,19 @@ An optional PowerShell module for [powershell-console](../../README.md) that dis
   - Falls back to username when not in AWS context
   - Uses `displayName` from config.json environments
 - **Visual Match/Mismatch Indicators**
-  - Green checkmark (✔ AWS) when in correct account
-  - Yellow warning (⚠️ AWS MISMATCH) when in wrong account
+  - Bright green checkmark ( AWS) when in correct account
+  - Bright red warning (⚠️ AWS MISMATCH) when in wrong account
   - Indicators only appear in directories mapped to AWS accounts
 - **Automatic Detection** - Reads active AWS account from `~/.aws/credentials`
 - **Directory Mapping** - Configure which AWS accounts are expected for specific directories
 - **oh-my-posh Integration** - Pre-configured themes with AWS indicators
-- **Performance Optimized** - Smart caching (<1ms typical, ~3ms on updates)
+- **Performance Optimized** - Smart caching (<1ms typical)
+  - Caches both valid and null results
+  - No slow prompts when logged out (fixed in v1.3.1)
+  - One-time detection after credential changes
 - **Simple Setup** - Two-line PowerShell profile integration
 - **Graceful Fallback** - Works seamlessly when not logged into AWS
+- **AWS Logout Integration** - Works with `aws-logout.ps1` script for clean session management
 
 ## Requirements
 
@@ -85,7 +89,7 @@ aws sts get-caller-identity
 
 ### Recommended: PowerShell Profile Integration (Always Active)
 
-The best way to use this module is to load it in your PowerShell profile so it's always available, not just when running cmdprmpt.ps1.
+The best way to use this module is to load it in your PowerShell profile so it's always available, not just when running console.ps1.
 
 **Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
 
@@ -111,7 +115,7 @@ Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\conf
 ```
 
 **Benefits of this approach:**
-- ✅ Works in ALL PowerShell sessions (not just cmdprmpt.ps1)
+- ✅ Works in ALL PowerShell sessions (not just console.ps1)
 - ✅ Updates automatically when you change directories
 - ✅ Updates automatically when you authenticate to AWS
 - ✅ Simple two-line setup - all logic contained in the module

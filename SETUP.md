@@ -83,7 +83,7 @@ Copy-Item config.example.json config.json
 ### 3. Verify Files
 
 Ensure you have these files:
-- `cmdprmpt.ps1` - Main script
+- `console.ps1` - Main script
 - `config.json` - Your configuration (created above)
 - `README.md` - Documentation
 - `SETUP.md` - This file
@@ -191,7 +191,7 @@ aws sts get-caller-identity --profile account1-OKTA-PROD-Admin
 
 The easiest way to set up your AWS accounts:
 
-1. Run the script: `.\cmdprmpt.ps1`
+1. Run the script: `.\console.ps1`
 2. Select "AWS Login" from Main Menu
 3. Select "Sync AWS Accounts from Okta"
 4. Authenticate with Okta when prompted
@@ -212,7 +212,7 @@ The easiest way to set up your AWS accounts:
 ### 1. Launch the Script
 
 ```powershell
-.\cmdprmpt.ps1
+.\console.ps1
 ```
 
 You should see the Main Menu:
@@ -525,7 +525,7 @@ After setup is complete:
    ```powershell
    # Add to your PowerShell profile
    function Start-AWSConsole {
-       & "C:\path\to\powershell-console\cmdprmpt.ps1"
+       & "C:\path\to\powershell-console\console.ps1"
    }
    Set-Alias awsc Start-AWSConsole
    ```

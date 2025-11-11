@@ -8,15 +8,19 @@ An optional PowerShell module for [powershell-console](../../README.md) that dis
   - Falls back to username when not in AWS context
   - Uses `displayName` from config.json environments
 - **Visual Match/Mismatch Indicators**
-  - Green checkmark (✔ AWS) when in correct account
-  - Yellow warning (⚠️ AWS MISMATCH) when in wrong account
+  - Bright green checkmark ( AWS) when in correct account
+  - Bright red warning (⚠️ AWS MISMATCH) when in wrong account
   - Indicators only appear in directories mapped to AWS accounts
 - **Automatic Detection** - Reads active AWS account from `~/.aws/credentials`
 - **Directory Mapping** - Configure which AWS accounts are expected for specific directories
 - **oh-my-posh Integration** - Pre-configured themes with AWS indicators
-- **Performance Optimized** - Smart caching (<1ms typical, ~3ms on updates)
+- **Performance Optimized** - Smart caching (<1ms typical)
+  - Caches both valid and null results
+  - No slow prompts when logged out (fixed in v1.3.1)
+  - One-time detection after credential changes
 - **Simple Setup** - Two-line PowerShell profile integration
 - **Graceful Fallback** - Works seamlessly when not logged into AWS
+- **AWS Logout Integration** - Works with `aws-logout.ps1` script for clean session management
 
 ## Requirements
 

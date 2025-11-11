@@ -20,6 +20,36 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.3.1 (2025-11-11)
+
+**Performance Fix & New Utility**
+
+Fixed performance issue with AWS Prompt Indicator and added AWS logout script.
+
+**Changes:**
+- **Performance Fix** (AWS Prompt Indicator):
+  - Fixed 1-second prompt delay when AWS credentials are expired/logged out
+  - Modified cache logic to cache both valid and null results
+  - Changed line 137 in `Get-CurrentAwsAccountId` to remove `&& $null -ne $script:CachedAccountId` condition
+  - Result: Fast prompts (<1ms) even when logged out, one-time delay (~1s) only on first prompt after logout
+- **New Script**: `scripts/aws-logout.ps1`
+  - Provides clean logout functionality for okta-aws-cli
+  - Clears only `[default]` profile credentials from `~/.aws/credentials`
+  - Preserves all other profiles
+  - Creates automatic backup before modification
+  - Error handling with backup restoration on failure
+- **Visual Improvements** (AWS Prompt Indicator):
+  - Match indicator: Bright green background (`#378504`) with Font Awesome checkmark ()
+  - Mismatch indicator: Bright red background (`#c62828`) with warning emoji (⚠️)
+  - Uses colors consistent with git status theme
+
+**Files Changed:**
+- `modules/aws-prompt-indicator/AwsPromptIndicator.psm1` (1 line fix)
+- `modules/aws-prompt-indicator/quick-term-aws.omp.json` (color updates)
+- `scripts/aws-logout.ps1` (new file, 86 lines)
+- `scripts/README.md` (new documentation)
+- `README.md` (updated features list)
+
 ### v1.3.0 (2025-11-10)
 
 **New Feature - AWS Prompt Indicator Module (Optional)**

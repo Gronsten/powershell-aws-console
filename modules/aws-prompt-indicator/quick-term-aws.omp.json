@@ -94,15 +94,15 @@
           "type": "executiontime"
         },
         {
-          "background": "#d7af00",
-          "foreground": "#121318",
+          "background": "#c62828",
+          "foreground": "#f2f3f8",
           "background_templates": [
             "{{ if eq .Env.AWS_ACCOUNT_MATCH \"true\" }}#378504{{ end }}"
           ],
           "invert_powerline": true,
           "style": "diamond",
           "leading_diamond": "\ue0b2",
-          "template": "{{ if eq .Env.AWS_ACCOUNT_MISMATCH \"true\" }} \u26a0\ufe0f AWS MISMATCH {{ else if eq .Env.AWS_ACCOUNT_MATCH \"true\" }} \u2714 AWS {{ end }}",
+          "template": "{{ if eq .Env.AWS_ACCOUNT_MISMATCH \"true\" }} \u26a0\ufe0f AWS MISMATCH {{ else if eq .Env.AWS_ACCOUNT_MATCH \"true\" }} \uf00c AWS {{ end }}",
           "type": "text"
         },
         {

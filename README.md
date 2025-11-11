@@ -147,7 +147,7 @@ Copy-Item config.example.json config.json
 
 4. Run the script:
 ```powershell
-.\cmdprmpt.ps1
+.\console.ps1
 ```
 
 See [SETUP.md](SETUP.md) for detailed configuration instructions.
@@ -156,7 +156,7 @@ See [SETUP.md](SETUP.md) for detailed configuration instructions.
 
 ### First Time Setup
 
-1. **Launch the script**: `.\cmdprmpt.ps1`
+1. **Launch the script**: `.\console.ps1`
 2. **Navigate to AWS Login** from Main Menu
 3. **Select "Sync AWS Accounts from Okta"** to discover all available accounts and roles
 4. **Authenticate with Okta** when prompted (one-time for all accounts)

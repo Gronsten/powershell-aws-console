@@ -89,7 +89,7 @@ aws sts get-caller-identity
 
 ### Recommended: PowerShell Profile Integration (Always Active)
 
-The best way to use this module is to load it in your PowerShell profile so it's always available, not just when running cmdprmpt.ps1.
+The best way to use this module is to load it in your PowerShell profile so it's always available, not just when running console.ps1.
 
 **Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
 
@@ -115,7 +115,7 @@ Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\conf
 ```
 
 **Benefits of this approach:**
-- ✅ Works in ALL PowerShell sessions (not just cmdprmpt.ps1)
+- ✅ Works in ALL PowerShell sessions (not just console.ps1)
 - ✅ Updates automatically when you change directories
 - ✅ Updates automatically when you authenticate to AWS
 - ✅ Simple two-line setup - all logic contained in the module

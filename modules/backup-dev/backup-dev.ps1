@@ -292,34 +292,43 @@ if ($countOnly) {
     Write-Host "  COUNT SUMMARY" -ForegroundColor Cyan
     Write-Separator
     Write-Host ""
-    Write-Host "                         Inventory    Need to Copy" -ForegroundColor Gray
-    Write-Host "                         ---------    ------------" -ForegroundColor DarkGray
+    Write-Host "                           Inventory    Need to Copy" -ForegroundColor Gray
+    Write-Host "                           ---------    ------------" -ForegroundColor DarkGray
 
-    # Format numbers with commas and right-alignment
-    $dirsInventory = "{0,15:N0}" -f $script:totalDirsInSource
-    $dirsChanged = "{0,16:N0}" -f $script:totalDirs
-    $filesInventory = "{0,15:N0}" -f $script:totalFilesInSource
-    $filesChanged = "{0,16:N0}" -f $script:totalFiles
-    $totalInventory = "{0,15:N0}" -f $inventoryItems
-    $totalChanged = "{0,16:N0}" -f $changedItems
+    # Format each line with proper alignment
+    # Label is 16 chars wide, Inventory is 13 chars wide (right-aligned), Need to Copy is 12 chars wide (right-aligned)
+    $labelWidth = -16
+    $inventoryWidth = 13
+    $changedWidth = 12
+
+    # Format the data lines
+    $dirsLine = "  {0,$labelWidth}" -f "Directories:"
+    $dirsLine += "{0,$inventoryWidth:N0}" -f $script:totalDirsInSource
+    $dirsLine += "{0,$changedWidth:N0}" -f $script:totalDirs
+
+    $filesLine = "  {0,$labelWidth}" -f "Files:"
+    $filesLine += "{0,$inventoryWidth:N0}" -f $script:totalFilesInSource
+    $filesLine += "{0,$changedWidth:N0}" -f $script:totalFiles
+
+    $totalLine = "  {0,$labelWidth}" -f "Total:"
+    $totalLine += "{0,$inventoryWidth:N0}" -f $inventoryItems
+    $totalLine += "{0,$changedWidth:N0}" -f $changedItems
+
+    # Output with colors
+    Write-Host $dirsLine.Substring(0, 18) -NoNewline -ForegroundColor Cyan
+    Write-Host $dirsLine.Substring(18, 13) -NoNewline -ForegroundColor White
+    Write-Host $dirsLine.Substring(31) -ForegroundColor Yellow
+
+    Write-Host $filesLine.Substring(0, 18) -NoNewline -ForegroundColor Cyan
+    Write-Host $filesLine.Substring(18, 13) -NoNewline -ForegroundColor White
+    Write-Host $filesLine.Substring(31) -ForegroundColor Yellow
 
     Write-Host "  " -NoNewline
-    Write-Host "Directories:" -NoNewline -ForegroundColor Cyan
-    Write-Host $dirsInventory -NoNewline -ForegroundColor White
-    Write-Host $dirsChanged -ForegroundColor Yellow
+    Write-Host ("─" * 41) -ForegroundColor DarkGray
 
-    Write-Host "  " -NoNewline
-    Write-Host "Files:      " -NoNewline -ForegroundColor Cyan
-    Write-Host $filesInventory -NoNewline -ForegroundColor White
-    Write-Host $filesChanged -ForegroundColor Yellow
-
-    Write-Host "  " -NoNewline
-    Write-Host ("─" * 47) -ForegroundColor DarkGray
-
-    Write-Host "  " -NoNewline
-    Write-Host "Total:      " -NoNewline -ForegroundColor Cyan
-    Write-Host $totalInventory -NoNewline -ForegroundColor White
-    Write-Host $totalChanged -ForegroundColor Yellow
+    Write-Host $totalLine.Substring(0, 18) -NoNewline -ForegroundColor Cyan
+    Write-Host $totalLine.Substring(18, 13) -NoNewline -ForegroundColor White
+    Write-Host $totalLine.Substring(31) -ForegroundColor Yellow
 
     Write-Host ""
     Write-Host "  Runtime: $runtimeFormatted" -ForegroundColor Gray

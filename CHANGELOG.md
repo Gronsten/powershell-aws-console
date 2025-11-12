@@ -20,6 +20,118 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.5.0 (2025-11-12)
+
+**Package Manager Enhancement: Multi-Select Installation with Unified Installation Phase**
+
+Added powerful multi-select capability to package search functionality, allowing users to select packages from multiple package managers and install them all at once in a unified installation phase.
+
+**New Features:**
+- **Multi-Select Installation**: After searching for packages globally, users can now:
+  - Select multiple packages using checkbox UI (Space to toggle, Enter to confirm)
+  - Select all packages with 'A' key
+  - Deselect all with 'N' key
+  - Cancel with 'Q' key
+  - **Selections queued across all package managers** (no immediate installation)
+  - Review complete installation summary before proceeding
+  - Install all selected packages in a single unified installation phase
+
+- **Supported Package Managers**:
+  - ✅ **npm** - Search npm registry (3.6M+ packages) with progressive batch selection
+  - ✅ **Scoop** - Search Scoop buckets and select packages
+  - ✅ **PyPI** - Search PyPI (exact match + variations) and select packages
+  - ✅ **winget** - Search winget packages and select packages (NEW!)
+
+- **Unified Installation Workflow**:
+  - All package managers complete their search and selection phases first
+  - Installation summary shows all selections grouped by package manager
+  - User confirms installation with Y/n prompt
+  - All packages installed together in one batch
+  - Installation results summarized with success/failure counts
+
+- **Smart Filtering**: Only non-installed packages are offered for selection
+  - Installed packages are highlighted in green during search
+  - Installation prompt only appears if uninstalled packages were found
+
+**User Experience:**
+- Reuses existing checkbox selection pattern from package updates
+- Consistent UI across all package managers
+- Deferred installation allows selecting from multiple PMs before installing
+- Clear visual feedback during installation with live status indicators
+- Comprehensive success/error reporting for each package
+
+**Benefits:**
+- Save time by selecting packages from multiple package managers in one session
+- Review all selections before any installation begins
+- No need to re-run searches to install packages one by one
+- Reduces manual typing of package names
+- Consistent experience across npm, Scoop, PyPI, and winget
+- Better error handling and reporting
+
+**Example Workflow:**
+```powershell
+# Complete workflow (all package managers → unified installation)
+1. Search: Enter "aws" → Select "Globally available"
+2. npm: "Found 50 packages" → Select from batches (M for more, Enter when done)
+   - Status: "✅ Added 3 npm package(s) to installation queue"
+3. Scoop: "Found 5 packages" → Select packages
+   - Status: "✅ Added 2 Scoop package(s) to installation queue"
+4. PyPI: "Found 8 packages" → Select packages
+   - Status: "✅ Added 1 pip package(s) to installation queue"
+5. winget: "Found 12 packages" → Select packages
+   - Status: "✅ Added 2 winget package(s) to installation queue"
+6. INSTALLATION SUMMARY appears:
+   Total: 8 package(s) selected
+
+   NPM (3 package(s)):
+     • aws-sdk (2.1450.0)
+     • aws-cli (1.29.0)
+     • @aws-cdk/core (2.100.0)
+
+   SCOOP (2 package(s)):
+     • aws
+     • awscli
+
+   PIP (1 package(s)):
+     • awscli
+
+   WINGET (2 package(s)):
+     • Amazon.AWSCLI
+     • Amazon.SAM-CLI
+
+   Proceed with installation? (Y/n): Y
+
+7. INSTALLING PACKAGES:
+   Installing npm packages...
+     → aws-sdk (2.1450.0)... ✅
+     → aws-cli (1.29.0)... ✅
+     → @aws-cdk/core (2.100.0)... ✅
+
+   Installing Scoop packages...
+     → aws... ✅
+     → awscli... ✅
+
+   Installing pip packages...
+     → awscli... ✅
+
+   Installing winget packages...
+     → Amazon.AWSCLI... ✅
+     → Amazon.SAM-CLI... ✅
+
+8. INSTALLATION COMPLETE
+   ✅ Successfully installed: 8
+```
+
+**Key Improvements:**
+- 🎯 **Deferred installation** - Select from all PMs before any installation begins
+- 📋 **Installation summary** - Review all selections grouped by PM before proceeding
+- ⚡ **Unified installation** - All packages installed in one batch, grouped by PM
+- 📦 **Persistent selections** - npm selections remembered across batches (M for more)
+- 🔄 **Progressive loading** - npm: Press M to fetch more batches, Enter when done
+- 📊 **Live status** - Real-time success/failure indicators during installation
+- ✅ **Comprehensive reporting** - Success/failure counts and detailed error messages
+- 🪟 **winget support** - Added multi-select capability for winget packages (NEW!)
+
 ### v1.4.0 (2025-11-12)
 
 **Project Structure Improvements**

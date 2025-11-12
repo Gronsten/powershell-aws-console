@@ -1137,6 +1137,332 @@ function Select-PackagesToUpdate {
     Write-Host "✅ Update process complete!" -ForegroundColor Green
 }
 
+function Show-CheckboxSelection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$Items,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Title,
+
+        [Parameter(Mandatory=$false)]
+        [string]$Instructions = "Use Up/Down arrows to navigate, Space to select/deselect, Enter to confirm"
+    )
+
+    if ($Items.Count -eq 0) {
+        return @()
+    }
+
+    $selectedIndexes = @()
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        $selectedIndexes += $false
+    }
+
+    $currentIndex = 0
+    $done = $false
+
+    # Draw header once
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  $($Title.PadRight(42)) ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    Write-Host $Instructions -ForegroundColor Gray
+    Write-Host "Press A to select all, N to deselect all, Q to cancel`n" -ForegroundColor Gray
+
+    $startLine = [Console]::CursorTop
+
+    # Draw initial list once (let console scroll naturally)
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        $item = $Items[$i]
+        $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
+
+        # Truncate to console width
+        $maxWidth = [Console]::WindowWidth - 10
+        if ($displayText.Length -gt $maxWidth) {
+            $displayText = $displayText.Substring(0, $maxWidth - 3) + "..."
+        }
+
+        $line = "  [ ] $displayText"
+        Write-Host $line
+    }
+
+    # After drawing, recalculate startLine (window may have scrolled)
+    $endLine = [Console]::CursorTop
+    $startLine = $endLine - $Items.Count
+
+    while (-not $done) {
+        # Redraw selection list
+        for ($i = 0; $i -lt $Items.Count; $i++) {
+            try {
+                [Console]::SetCursorPosition(0, $startLine + $i)
+            } catch {
+                # If we can't set position, we're likely at buffer limit
+                continue
+            }
+
+            $item = $Items[$i]
+            $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
+            $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
+
+            $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
+
+            # Truncate to console width to prevent wrapping
+            $maxWidth = [Console]::WindowWidth - 10
+            if ($displayText.Length -gt $maxWidth) {
+                $displayText = $displayText.Substring(0, $maxWidth - 3) + "..."
+            }
+
+            # Build line with padding
+            $line = "$arrow $checkbox $displayText"
+            $lineWidth = [Math]::Min($line.Length + 5, [Console]::WindowWidth - 1)
+            $line = $line.PadRight($lineWidth)
+
+            # Write with color based on current selection
+            if ($i -eq $currentIndex) {
+                [Console]::ForegroundColor = [ConsoleColor]::Green
+            } else {
+                [Console]::ForegroundColor = [ConsoleColor]::White
+            }
+            [Console]::Write($line)
+            [Console]::ResetColor()
+        }
+
+        $key = [Console]::ReadKey($true)
+
+        switch ($key.Key) {
+            'UpArrow' {
+                $currentIndex = ($currentIndex - 1 + $Items.Count) % $Items.Count
+            }
+            'DownArrow' {
+                $currentIndex = ($currentIndex + 1) % $Items.Count
+            }
+            'Spacebar' {
+                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+            }
+            'A' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $true
+                }
+            }
+            'N' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $false
+                }
+            }
+            'Enter' {
+                $done = $true
+            }
+            'Q' {
+                # Move cursor past the selection list before returning
+                [Console]::SetCursorPosition(0, $startLine + $Items.Count)
+                Write-Host ""
+                return $null  # Return null to indicate cancellation
+            }
+        }
+    }
+
+    # Move cursor past the selection list to continue normal output
+    [Console]::SetCursorPosition(0, $startLine + $Items.Count)
+    Write-Host ""
+
+    # Return selected items
+    $selected = @()
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        if ($selectedIndexes[$i]) {
+            $selected += $Items[$i]
+        }
+    }
+
+    return $selected
+}
+
+function Show-InlineBatchSelection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$CurrentBatch,
+
+        [Parameter(Mandatory=$true)]
+        [ref]$AllSelections,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Title,
+
+        [Parameter(Mandatory=$false)]
+        [int]$BatchNumber = 1,
+
+        [Parameter(Mandatory=$false)]
+        [int]$TotalShown = 0,
+
+        [Parameter(Mandatory=$false)]
+        [int]$TotalAvailable = 0
+    )
+
+    if ($CurrentBatch.Count -eq 0) {
+        return @{
+            Continue = $false
+            FetchMore = $false
+        }
+    }
+
+    $selectedIndexes = @()
+    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+        $selectedIndexes += $false
+    }
+
+    $currentIndex = 0
+    $done = $false
+
+    # Draw initial UI
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  $($Title.PadRight(42)) ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+    $moreAvailable = $TotalShown -lt $TotalAvailable
+    Write-Host "Showing $TotalShown of $TotalAvailable | Selected: $($AllSelections.Value.Count)" -ForegroundColor Yellow
+    Write-Host "Use Up/Down arrows, Space to select, Enter when done" -ForegroundColor Gray
+    if ($moreAvailable) {
+        Write-Host "Press M to save selections and fetch More, A for all, N for none, Q to cancel" -ForegroundColor Cyan
+    } else {
+        Write-Host "Press A to select all, N to deselect all, Q to cancel" -ForegroundColor Gray
+    }
+    Write-Host ""
+
+    $startLine = [Console]::CursorTop
+
+    # Draw initial list once (let console scroll naturally)
+    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+        $item = $CurrentBatch[$i]
+        $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
+
+        # Truncate to console width
+        $maxWidth = [Console]::WindowWidth - 10
+        if ($displayText.Length -gt $maxWidth) {
+            $displayText = $displayText.Substring(0, $maxWidth - 3) + "..."
+        }
+
+        $line = "  [ ] $displayText"
+        Write-Host $line
+    }
+
+    # After drawing, recalculate startLine (window may have scrolled)
+    $endLine = [Console]::CursorTop
+    $startLine = $endLine - $CurrentBatch.Count
+
+    while (-not $done) {
+        # Redraw selection list
+        for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+            try {
+                [Console]::SetCursorPosition(0, $startLine + $i)
+            } catch {
+                # If we can't set position, we're likely at buffer limit
+                continue
+            }
+
+            $item = $CurrentBatch[$i]
+            $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
+            $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
+
+            $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
+
+            # Truncate to console width to prevent wrapping
+            $maxWidth = [Console]::WindowWidth - 10
+            if ($displayText.Length -gt $maxWidth) {
+                $displayText = $displayText.Substring(0, $maxWidth - 3) + "..."
+            }
+
+            # Build line
+            $line = "$arrow $checkbox $displayText"
+
+            # Pad to clear any previous longer content
+            $lineWidth = [Math]::Min($line.Length + 5, [Console]::WindowWidth - 1)
+            $line = $line.PadRight($lineWidth)
+
+            # Write with color based on current selection
+            if ($i -eq $currentIndex) {
+                [Console]::ForegroundColor = [ConsoleColor]::Green
+            } else {
+                [Console]::ForegroundColor = [ConsoleColor]::White
+            }
+            [Console]::Write($line)
+            [Console]::ResetColor()
+        }
+
+        $key = [Console]::ReadKey($true)
+
+        switch ($key.Key) {
+            'UpArrow' {
+                $currentIndex = ($currentIndex - 1 + $CurrentBatch.Count) % $CurrentBatch.Count
+            }
+            'DownArrow' {
+                $currentIndex = ($currentIndex + 1) % $CurrentBatch.Count
+            }
+            'Spacebar' {
+                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+            }
+            'A' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $true
+                }
+            }
+            'N' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $false
+                }
+            }
+            'M' {
+                if ($moreAvailable) {
+                    # Move cursor past the selection list to continue normal output
+                    [Console]::SetCursorPosition(0, $startLine + $CurrentBatch.Count)
+                    Write-Host ""  # Add blank line after selection
+
+                    # Add selections from this batch
+                    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+                        if ($selectedIndexes[$i]) {
+                            $AllSelections.Value += $CurrentBatch[$i]
+                        }
+                    }
+                    return @{
+                        Continue = $true
+                        FetchMore = $true
+                    }
+                }
+            }
+            'Enter' {
+                $done = $true
+            }
+            'Q' {
+                # Move cursor past the selection list to continue normal output
+                [Console]::SetCursorPosition(0, $startLine + $CurrentBatch.Count)
+                Write-Host ""  # Add blank line after selection
+
+                return @{
+                    Continue = $false
+                    FetchMore = $false
+                    Cancelled = $true
+                }
+            }
+        }
+    }
+
+    # Move cursor past the selection list to continue normal output
+    [Console]::SetCursorPosition(0, $startLine + $CurrentBatch.Count)
+    Write-Host ""  # Add blank line after selection
+
+    # Add final selections from this batch
+    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+        if ($selectedIndexes[$i]) {
+            $AllSelections.Value += $CurrentBatch[$i]
+        }
+    }
+
+    return @{
+        Continue = $true
+        FetchMore = $false
+    }
+}
+
 function Search-Packages {
     [CmdletBinding()]
     param()
@@ -1160,6 +1486,9 @@ function Search-Packages {
     } else {
         Write-Host "`nSearching installed packages for '$searchTerm'...`n" -ForegroundColor Cyan
     }
+
+    # Master collection for ALL package manager selections
+    $script:AllPackageSelections = @()
 
     # Get list of installed packages for highlighting when searching globally
     $installedScoop = @()
@@ -1270,42 +1599,79 @@ function Search-Packages {
             if ($scoopResults -match "No matches found" -or [string]::IsNullOrWhiteSpace($scoopResults)) {
                 Write-Host "  No matches found" -ForegroundColor Gray
             } else {
-                # Parse and sort scoop search output
+                # Parse scoop search output
                 $scoopLines = $scoopResults -split "`n"
-                $headerLines = @()
-                $dataLines = @()
+                $scoopSearchResults = @()
 
                 foreach ($line in $scoopLines) {
-                    # Detect header lines (bucket names, section headers, column headers, separator lines)
+                    # Skip header lines
                     if ($line -match "^'.*'.*bucket" -or
                         $line -match "^Results from" -or
                         $line -match "^Name\s+Version\s+Source" -or
                         $line -match "^\*Name\s+Version\s+Source" -or
-                        $line -match "^-+\s+-+\s+-+") {
-                        $headerLines += $line
-                    } elseif ($line.Trim().Length -gt 0) {
-                        # Only add non-empty lines to data
-                        $dataLines += $line
+                        $line -match "^-+\s+-+\s+-+" -or
+                        $line.Trim().Length -eq 0) {
+                        continue
+                    }
+
+                    # Parse package info from line (format: "name version (bucket)")
+                    if ($line -match '^\s*(\S+)\s+(\S+)\s+\((\S+)\)') {
+                        $pkgName = $matches[1]
+                        $pkgVersion = $matches[2]
+                        $pkgBucket = $matches[3]
+
+                        $isInstalled = $false
+                        foreach ($pkg in $installedScoop) {
+                            if ($pkgName -eq $pkg) {
+                                $isInstalled = $true
+                                break
+                            }
+                        }
+
+                        $scoopSearchResults += @{
+                            Manager = "Scoop"
+                            Name = $pkgName
+                            Version = $pkgVersion
+                            Bucket = $pkgBucket
+                            Installed = $isInstalled
+                            DisplayText = if ($isInstalled) {
+                                "[ ] $pkgName - $pkgVersion ($pkgBucket) [INSTALLED]"
+                            } else {
+                                "[ ] $pkgName - $pkgVersion ($pkgBucket)"
+                            }
+                        }
                     }
                 }
 
-                # Display headers first
-                $headerLines | ForEach-Object { Write-Host $_ }
+                Write-Host "  Found $($scoopSearchResults.Count) package(s)" -ForegroundColor Cyan
+                Write-Host ""
 
-                # Sort and display data with highlighting (already filtered for non-empty)
-                $sortedData = $dataLines | Sort-Object
-                foreach ($line in $sortedData) {
-                    $isInstalled = $false
-                    foreach ($pkg in $installedScoop) {
-                        if ($line -match "^\s*$pkg\s" -or $line -match "/$pkg\s") {
-                            $isInstalled = $true
-                            break
+                # Filter out installed packages for selection
+                $availableForInstall = $scoopSearchResults | Where-Object { -not $_.Installed }
+
+                if ($availableForInstall.Count -eq 0) {
+                    Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                } else {
+                    Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                    Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
+                    Write-Host ""
+
+                    # Show interactive selection
+                    $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT SCOOP PACKAGES TO INSTALL"
+
+                    if ($selectedPackages -and $selectedPackages.Count -gt 0) {
+                        # Ensure each package has Manager property for unified installation
+                        foreach ($pkg in $selectedPackages) {
+                            if (-not $pkg.Manager) {
+                                $pkg.Manager = "scoop"
+                            }
                         }
-                    }
-                    if ($isInstalled) {
-                        Write-Host $line -ForegroundColor Green
+                        $script:AllPackageSelections += $selectedPackages
+                        Write-Host "`n✅ Added $($selectedPackages.Count) Scoop package(s) to installation queue" -ForegroundColor Green
+                    } elseif ($null -eq $selectedPackages) {
+                        Write-Host "`nScoop selection cancelled." -ForegroundColor Yellow
                     } else {
-                        Write-Host $line
+                        Write-Host "`nNo Scoop packages selected." -ForegroundColor Yellow
                     }
                 }
             }
@@ -1419,11 +1785,17 @@ function Search-Packages {
                     Write-Host "  Found $($sortedMatches.Count) matching packages" -ForegroundColor Cyan
                     Write-Host ""
 
-                    # Display packages in batches of 20
+                    # Track all selections across batches
+                    $allSelections = @()
+                    $allSelectionsRef = [ref]$allSelections
+
+                    # Fetch and display metadata in batches with inline selection
                     $batchSize = 20
                     $startIndex = 0
+                    $batchNumber = 1
+                    $continueSearching = $true
 
-                    while ($startIndex -lt $sortedMatches.Count) {
+                    while ($continueSearching -and $startIndex -lt $sortedMatches.Count) {
                         # Get next batch (prioritize non-scoped first)
                         $remainingMatches = $sortedMatches | Select-Object -Skip $startIndex
                         $nonScoped = $remainingMatches | Where-Object { -not $_.StartsWith('@') } | Select-Object -First $batchSize
@@ -1432,9 +1804,7 @@ function Search-Packages {
 
                         if ($currentBatch.Count -eq 0) { break }
 
-                        # Print table header
-                        Write-Host "  NAME              VERSION         DESCRIPTION" -ForegroundColor Cyan
-                        Write-Host "  ================  ==============  ========================================" -ForegroundColor DarkGray
+                        Write-Host "  Fetching metadata for batch $batchNumber..." -ForegroundColor Gray
 
                         # Fetch package metadata in parallel using runspaces for better performance
                         $runspacePool = [runspacefactory]::CreateRunspacePool(1, 20)
@@ -1485,54 +1855,63 @@ function Search-Packages {
                         $runspacePool.Close()
                         $runspacePool.Dispose()
 
-                        # Display packages in original order
+                        # Build batch of package objects for inline selection
+                        $batchPackages = @()
                         foreach ($pkgName in $currentBatch) {
                             $result = $results[$pkgName]
                             $isInstalled = $installedNpm -contains $pkgName
 
-                            if ($result -and $result.success) {
+                            if ($result -and $result.success -and -not $isInstalled) {
                                 $version = $result.version
                                 $description = if ($result.description) { $result.description } else { "" }
 
-                                # Truncate description to fit in table (60 chars max)
-                                if ($description.Length -gt 60) {
-                                    $description = $description.Substring(0, 57) + "..."
+                                # Truncate description for display
+                                $descriptionShort = if ($description.Length -gt 40) { $description.Substring(0, 37) + "..." } else { $description }
+
+                                $batchPackages += @{
+                                    Manager = "npm"
+                                    Name = $pkgName
+                                    Version = $version
+                                    Description = $description
+                                    DisplayText = "$pkgName - $version - $descriptionShort"
                                 }
-
-                                # Format name with [I] indicator if installed
-                                $nameDisplay = if ($isInstalled) { "$pkgName [I]" } else { $pkgName }
-
-                                # Pad columns for alignment (NAME: 16, VERSION: 14, DESC: 60)
-                                $namePadded = $nameDisplay.PadRight(16)
-                                $versionPadded = $version.PadRight(14)
-
-                                # Color installed packages green
-                                if ($isInstalled) {
-                                    Write-Host "  $namePadded  $versionPadded  $description" -ForegroundColor Green
-                                } else {
-                                    Write-Host "  $namePadded  $versionPadded  $description"
-                                }
-                            } else {
-                                # Failed to fetch metadata
-                                $namePadded = $pkgName.PadRight(16)
-                                Write-Host "  $namePadded  (error)         Unable to fetch package details" -ForegroundColor DarkGray
                             }
                         }
-                        Write-Host ""
 
                         $startIndex += $currentBatch.Count
 
-                        # Prompt to show more if there are remaining packages
-                        if ($startIndex -lt $sortedMatches.Count) {
-                            $remaining = $sortedMatches.Count - $startIndex
-                            Write-Host ""
-                            Write-Host "  Showing $startIndex of $($sortedMatches.Count) matches. $remaining more available." -ForegroundColor Yellow
-                            $response = Read-Host "  Show more? (Y/n)"
-                            if ($response -match '^[Nn]') {
-                                break
+                        # Show inline batch selection if we have packages
+                        if ($batchPackages.Count -gt 0) {
+                            $result = Show-InlineBatchSelection `
+                                -CurrentBatch $batchPackages `
+                                -AllSelections $allSelectionsRef `
+                                -Title "SELECT NPM PACKAGES (BATCH $batchNumber)" `
+                                -BatchNumber $batchNumber `
+                                -TotalShown $startIndex `
+                                -TotalAvailable $sortedMatches.Count
+
+                            if ($result.Cancelled) {
+                                $continueSearching = $false
+                            } elseif (-not $result.FetchMore) {
+                                $continueSearching = $false
                             }
-                            Write-Host ""
                         }
+
+                        $batchNumber++
+                    }
+
+                    # Add selections to master collection for later installation
+                    if ($allSelections.Count -gt 0) {
+                        # Ensure each package has Manager property for unified installation
+                        foreach ($pkg in $allSelections) {
+                            if (-not $pkg.Manager) {
+                                $pkg.Manager = "npm"
+                            }
+                        }
+                        $script:AllPackageSelections += $allSelections
+                        Write-Host "`n✅ Added $($allSelections.Count) npm package(s) to installation queue" -ForegroundColor Green
+                    } elseif (-not $result.Cancelled) {
+                        Write-Host "`nNo npm packages selected." -ForegroundColor Yellow
                     }
                 }
             }
@@ -1618,6 +1997,9 @@ function Search-Packages {
                 # Use PyPI JSON API to search (pip search was disabled in 2021)
                 Write-Host "  Searching PyPI for '$searchTerm'..." -ForegroundColor Gray
                 try {
+                    # Collect packages for potential installation
+                    $pipSearchResults = @()
+
                     # Use PyPI's simple search via web scraping alternative
                     $searchUrl = "https://pypi.org/search/?q=$searchTerm"
                     Write-Host "  Note: Using web search. For more results visit: $searchUrl" -ForegroundColor Cyan
@@ -1635,6 +2017,16 @@ function Search-Packages {
 
                                 $installStatus = if ($isInstalled) { " [INSTALLED]" } else { "" }
                                 $color = if ($isInstalled) { "Green" } else { "White" }
+
+                                # Add to results collection
+                                $pipSearchResults += @{
+                                    Manager = "pip"
+                                    Name = $pkgInfo.name
+                                    Version = $pkgInfo.version
+                                    Summary = $pkgInfo.summary
+                                    Installed = $isInstalled
+                                    DisplayText = "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                }
 
                                 Write-Host "  Package: $($pkgInfo.name)$installStatus" -ForegroundColor $color
                                 Write-Host "  Version: $($pkgInfo.version)" -ForegroundColor Gray
@@ -1657,6 +2049,16 @@ function Search-Packages {
 
                                         $installStatus = if ($isInstalled) { " [INSTALLED]" } else { "" }
                                         $color = if ($isInstalled) { "Green" } else { "White" }
+
+                                        # Add to results collection
+                                        $pipSearchResults += @{
+                                            Manager = "pip"
+                                            Name = $pkgInfo.name
+                                            Version = $pkgInfo.version
+                                            Summary = $pkgInfo.summary
+                                            Installed = $isInstalled
+                                            DisplayText = "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                        }
 
                                         Write-Host "  Found similar package:" -ForegroundColor Cyan
                                         Write-Host "  Package: $($pkgInfo.name)$installStatus" -ForegroundColor $color
@@ -1733,6 +2135,40 @@ function Search-Packages {
                             }
                         }
                     }
+
+                    # Offer to install packages from search results
+                    if ($pipSearchResults.Count -eq 0) {
+                        Write-Host "  No packages found to install" -ForegroundColor Gray
+                    } else {
+                        $availableForInstall = $pipSearchResults | Where-Object { -not $_.Installed }
+
+                        if ($availableForInstall.Count -eq 0) {
+                            Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                        } else {
+                            Write-Host ""
+                            Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                            Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
+                            Write-Host ""
+
+                            # Show interactive selection
+                            $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PIP PACKAGES TO INSTALL"
+
+                            if ($selectedPackages -and $selectedPackages.Count -gt 0) {
+                                # Ensure each package has Manager property for unified installation
+                                foreach ($pkg in $selectedPackages) {
+                                    if (-not $pkg.Manager) {
+                                        $pkg.Manager = "pip"
+                                    }
+                                }
+                                $script:AllPackageSelections += $selectedPackages
+                                Write-Host "`n✅ Added $($selectedPackages.Count) pip package(s) to installation queue" -ForegroundColor Green
+                            } elseif ($null -eq $selectedPackages) {
+                                Write-Host "`nPip selection cancelled." -ForegroundColor Yellow
+                            } else {
+                                Write-Host "`nNo pip packages selected." -ForegroundColor Yellow
+                            }
+                        }
+                    }
                 } catch {
                     Write-Host "  ⚠️  Error searching PyPI. Visit https://pypi.org/search/?q=$searchTerm" -ForegroundColor Yellow
                 }
@@ -1800,50 +2236,271 @@ function Search-Packages {
                 }
             }
 
-            # Display header
-            if ($headerLine) {
-                Write-Host $headerLine
-            }
-            if ($separatorLine) {
-                Write-Host $separatorLine
-            }
-
-            # Sort data lines alphabetically
+            # Parse data lines into structured objects
+            $wingetSearchResults = @()
             $sortedDataLines = $dataLines | Sort-Object
 
+            foreach ($line in $sortedDataLines) {
+                # Extract package information (Name, Id, Version)
+                $parts = $line -split '\s{2,}' | Where-Object { $_.Trim() -ne '' }
+                if ($parts.Count -ge 3) {
+                    $packageName = $parts[0].Trim()
+                    $packageId = $parts[1].Trim()
+                    $packageVersion = $parts[2].Trim()
+                    $isInstalled = $installedWinget -contains $packageId
+
+                    $wingetSearchResults += @{
+                        Manager = "winget"
+                        Name = $packageId
+                        DisplayName = $packageName
+                        Version = $packageVersion
+                        Installed = $isInstalled
+                        DisplayText = "$packageName - $packageId ($packageVersion)"
+                    }
+                }
+            }
+
             if ($searchInstalled) {
-                # Just display sorted results for installed search
+                # Just display results for installed search
+                if ($headerLine) { Write-Host $headerLine }
+                if ($separatorLine) { Write-Host $separatorLine }
                 foreach ($line in $sortedDataLines) {
                     Write-Host $line
                 }
+                foreach ($line in $footerLines) {
+                    Write-Host $line
+                }
             } else {
-                # Highlight installed packages in global search
+                # Display with highlighting, then offer selection
+                if ($headerLine) { Write-Host $headerLine }
+                if ($separatorLine) { Write-Host $separatorLine }
                 foreach ($line in $sortedDataLines) {
-                    $isInstalled = $false
-                    # Extract package ID from the line
                     $parts = $line -split '\s{2,}' | Where-Object { $_.Trim() -ne '' }
+                    $isInstalled = $false
                     if ($parts.Count -ge 2) {
                         $packageId = $parts[1].Trim()
                         if ($installedWinget -contains $packageId) {
                             $isInstalled = $true
                         }
                     }
-
                     if ($isInstalled) {
                         Write-Host $line -ForegroundColor Green
                     } else {
                         Write-Host $line
                     }
                 }
-            }
+                foreach ($line in $footerLines) {
+                    Write-Host $line
+                }
 
-            # Display footer
-            foreach ($line in $footerLines) {
-                Write-Host $line
+                # Offer to install packages from search results
+                if ($wingetSearchResults.Count -eq 0) {
+                    Write-Host "  No packages found to install" -ForegroundColor Gray
+                } else {
+                    $availableForInstall = $wingetSearchResults | Where-Object { -not $_.Installed }
+
+                    if ($availableForInstall.Count -eq 0) {
+                        Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                    } else {
+                        Write-Host ""
+                        Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                        Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
+                        Write-Host ""
+
+                        # Show interactive selection
+                        $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT WINGET PACKAGES TO INSTALL"
+
+                        if ($selectedPackages -and $selectedPackages.Count -gt 0) {
+                            # Ensure each package has Manager property for unified installation
+                            foreach ($pkg in $selectedPackages) {
+                                if (-not $pkg.Manager) {
+                                    $pkg.Manager = "winget"
+                                }
+                            }
+                            $script:AllPackageSelections += $selectedPackages
+                            Write-Host "`n✅ Added $($selectedPackages.Count) winget package(s) to installation queue" -ForegroundColor Green
+                        } elseif ($null -eq $selectedPackages) {
+                            Write-Host "`nWinget selection cancelled." -ForegroundColor Yellow
+                        } else {
+                            Write-Host "`nNo winget packages selected." -ForegroundColor Yellow
+                        }
+                    }
+                }
             }
         }
     } catch {
         Write-Host "  ⚠️  winget not found or error searching" -ForegroundColor Red
+    }
+
+    # ═══════════════════════════════════════════════════════════════
+    # INSTALLATION SUMMARY & UNIFIED INSTALLATION
+    # ═══════════════════════════════════════════════════════════════
+
+    Write-Host ""
+
+    # Check if any packages were selected across all package managers
+    if ($script:AllPackageSelections.Count -eq 0) {
+        Write-Host "No packages selected for installation." -ForegroundColor Gray
+        return
+    }
+
+    # Display installation summary
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  INSTALLATION SUMMARY                      ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    # Group selections by package manager
+    $byManager = $script:AllPackageSelections | Group-Object Manager
+
+    Write-Host "Total: $($script:AllPackageSelections.Count) package(s) selected`n" -ForegroundColor White
+
+    foreach ($group in $byManager) {
+        $managerName = $group.Name.ToUpper()
+        Write-Host "  $managerName ($($group.Count) package(s)):" -ForegroundColor Yellow
+        foreach ($pkg in $group.Group) {
+            if ($pkg.Version) {
+                Write-Host "    • $($pkg.Name) ($($pkg.Version))" -ForegroundColor White
+            } else {
+                Write-Host "    • $($pkg.Name)" -ForegroundColor White
+            }
+        }
+        Write-Host ""
+    }
+
+    # Confirm installation
+    Write-Host "Proceed with installation? (Y/n): " -ForegroundColor Cyan -NoNewline
+    $confirm = Read-Host
+    if ($confirm -match '^[Nn]') {
+        Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
+        return
+    }
+
+    # ═══════════════════════════════════════════════════════════════
+    # UNIFIED INSTALLATION PHASE
+    # ═══════════════════════════════════════════════════════════════
+
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  INSTALLING PACKAGES                       ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    $installResults = @{
+        Success = 0
+        Failed = 0
+        Errors = @()
+    }
+
+    # Install npm packages
+    $npmPackages = $script:AllPackageSelections | Where-Object { $_.Manager -eq "npm" }
+    if ($npmPackages.Count -gt 0) {
+        Write-Host "Installing npm packages..." -ForegroundColor Cyan
+        foreach ($pkg in $npmPackages) {
+            Write-Host "  → $($pkg.Name) ($($pkg.Version))..." -ForegroundColor Yellow -NoNewline
+            try {
+                $output = npm install -g "$($pkg.Name)@$($pkg.Version)" 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " ✅" -ForegroundColor Green
+                    $installResults.Success++
+                } else {
+                    Write-Host " ❌" -ForegroundColor Red
+                    $installResults.Failed++
+                    $installResults.Errors += "npm: $($pkg.Name) - $output"
+                }
+            } catch {
+                Write-Host " ❌" -ForegroundColor Red
+                $installResults.Failed++
+                $installResults.Errors += "npm: $($pkg.Name) - $_"
+            }
+        }
+        Write-Host ""
+    }
+
+    # Install Scoop packages
+    $scoopPackages = $script:AllPackageSelections | Where-Object { $_.Manager -eq "scoop" }
+    if ($scoopPackages.Count -gt 0) {
+        Write-Host "Installing Scoop packages..." -ForegroundColor Cyan
+        foreach ($pkg in $scoopPackages) {
+            Write-Host "  → $($pkg.Name)..." -ForegroundColor Yellow -NoNewline
+            try {
+                $output = scoop install $pkg.Name 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " ✅" -ForegroundColor Green
+                    $installResults.Success++
+                } else {
+                    Write-Host " ❌" -ForegroundColor Red
+                    $installResults.Failed++
+                    $installResults.Errors += "scoop: $($pkg.Name) - $output"
+                }
+            } catch {
+                Write-Host " ❌" -ForegroundColor Red
+                $installResults.Failed++
+                $installResults.Errors += "scoop: $($pkg.Name) - $_"
+            }
+        }
+        Write-Host ""
+    }
+
+    # Install pip packages
+    $pipPackages = $script:AllPackageSelections | Where-Object { $_.Manager -eq "pip" }
+    if ($pipPackages.Count -gt 0) {
+        Write-Host "Installing pip packages..." -ForegroundColor Cyan
+        foreach ($pkg in $pipPackages) {
+            Write-Host "  → $($pkg.Name)..." -ForegroundColor Yellow -NoNewline
+            try {
+                $output = pip install $pkg.Name 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " ✅" -ForegroundColor Green
+                    $installResults.Success++
+                } else {
+                    Write-Host " ❌" -ForegroundColor Red
+                    $installResults.Failed++
+                    $installResults.Errors += "pip: $($pkg.Name) - $output"
+                }
+            } catch {
+                Write-Host " ❌" -ForegroundColor Red
+                $installResults.Failed++
+                $installResults.Errors += "pip: $($pkg.Name) - $_"
+            }
+        }
+        Write-Host ""
+    }
+
+    # Install winget packages
+    $wingetPackages = $script:AllPackageSelections | Where-Object { $_.Manager -eq "winget" }
+    if ($wingetPackages.Count -gt 0) {
+        Write-Host "Installing winget packages..." -ForegroundColor Cyan
+        foreach ($pkg in $wingetPackages) {
+            Write-Host "  → $($pkg.Name)..." -ForegroundColor Yellow -NoNewline
+            try {
+                $output = winget install --id $pkg.Name --exact --silent --accept-package-agreements --accept-source-agreements 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " ✅" -ForegroundColor Green
+                    $installResults.Success++
+                } else {
+                    Write-Host " ❌" -ForegroundColor Red
+                    $installResults.Failed++
+                    $installResults.Errors += "winget: $($pkg.Name) - $output"
+                }
+            } catch {
+                Write-Host " ❌" -ForegroundColor Red
+                $installResults.Failed++
+                $installResults.Errors += "winget: $($pkg.Name) - $_"
+            }
+        }
+        Write-Host ""
+    }
+
+    # Display final summary
+    Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  INSTALLATION COMPLETE                     ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+    Write-Host "  ✅ Successfully installed: $($installResults.Success)" -ForegroundColor Green
+    if ($installResults.Failed -gt 0) {
+        Write-Host "  ❌ Failed: $($installResults.Failed)" -ForegroundColor Red
+        Write-Host "`nErrors:" -ForegroundColor Red
+        foreach ($errorMsg in $installResults.Errors) {
+            Write-Host "  • $errorMsg" -ForegroundColor Gray
+        }
     }
 
     Write-Host ""

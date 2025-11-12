@@ -86,7 +86,8 @@ function Write-Separator {
 
 # Load configuration
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$configPath = Join-Path $scriptDir "config.json"
+$rootDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$configPath = Join-Path $rootDir "config.json"
 
 if (-not (Test-Path $configPath)) {
     Write-Error "Config file not found at: $configPath"
@@ -100,7 +101,7 @@ $config = Get-Content $configPath -Raw | ConvertFrom-Json
 $source = $config.paths.backupSource
 $destination = Join-Path $env:USERPROFILE $config.paths.backupDestination
 
-# Define log files
+# Define log files (in module directory)
 $detailedLog = Join-Path $scriptDir "backup-dev.log"
 $summaryLog = Join-Path $scriptDir "backup-history.log"
 

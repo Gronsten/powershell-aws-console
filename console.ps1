@@ -2488,7 +2488,7 @@ function Start-MerakiBackup {
 
 function Start-CodeCount {
     # Use $PSScriptRoot to get the actual script directory
-    $countScriptPath = Join-Path $PSScriptRoot "count-lines.py"
+    $countScriptPath = Join-Path $PSScriptRoot "scripts\count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
@@ -2737,7 +2737,7 @@ function Start-CodeCount {
 # Helper function to get backup script path
 function Get-BackupScriptPath {
     # Use $PSScriptRoot to get the actual script directory (handles project renames automatically)
-    $backupScriptPath = Join-Path $PSScriptRoot "backup-dev.ps1"
+    $backupScriptPath = Join-Path $PSScriptRoot "modules\backup-dev\backup-dev.ps1"
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red

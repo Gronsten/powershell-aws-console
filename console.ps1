@@ -2812,16 +2812,6 @@ function Invoke-BackupScript {
     pause
 }
 
-function Start-BackupListOnly {
-    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  BACKUP - LIST-ONLY MODE                   ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
-    Write-Host "This will preview all changes without modifying any files." -ForegroundColor Yellow
-    Write-Host ""
-
-    Invoke-BackupScript -Arguments @("--list-only") -Description "List-only scan"
-}
 
 function Start-BackupTestMode {
     Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -2878,14 +2868,11 @@ function Start-BackupDevEnvironment {
 function Show-BackupDevMenu {
     # Define backup submenu
     $defaultMenu = @(
-        (New-MenuAction "List-Only Mode (Preview)" {
-            Start-BackupListOnly
+        (New-MenuAction "Count Mode (Quantify Source)" {
+            Start-BackupCountMode
         }),
         (New-MenuAction "Test Mode (Limited Preview)" {
             Start-BackupTestMode
-        }),
-        (New-MenuAction "Count Mode (Quantify Source)" {
-            Start-BackupCountMode
         }),
         (New-MenuAction "Full Backup" {
             Start-BackupDevEnvironment

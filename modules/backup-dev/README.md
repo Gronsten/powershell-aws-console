@@ -6,7 +6,6 @@ A PowerShell module for [powershell-console](../../README.md) that provides inte
 
 - **Multiple Backup Modes**
   - Full backup (complete mirror with deletions)
-  - List-only mode (preview changes without modifying files)
   - Test mode (preview limited number of operations)
   - Count mode (count files and directories only)
 - **Smart Exclusions** - Respects .gitignore patterns and custom exclusion rules
@@ -41,21 +40,17 @@ The easiest way to use backup-dev is through the console.ps1 menu:
 1. Run `console.ps1`
 2. Select "Backup" from the menu
 3. Choose your backup mode:
-   - **Full Backup** - Complete mirror with deletions
-   - **List-Only** - Preview changes without modifying files
-   - **Test Mode** - Preview limited operations (configurable limit, minimum 100)
    - **Count Only** - Count files and directories
+   - **Test Mode** - Preview limited operations (configurable limit, minimum 100)
+   - **Full Backup** - Complete mirror with deletions
 
 ### Direct Script Usage
 
 You can also call the script directly:
 
 ```powershell
-# Full backup
-.\modules\backup-dev\backup-dev.ps1
-
-# List-only mode (preview changes)
-.\modules\backup-dev\backup-dev.ps1 --list-only
+# Count only
+.\modules\backup-dev\backup-dev.ps1 --count
 
 # Test mode with default limit (100 items)
 .\modules\backup-dev\backup-dev.ps1 --test-mode
@@ -63,8 +58,8 @@ You can also call the script directly:
 # Test mode with custom limit (minimum 100)
 .\modules\backup-dev\backup-dev.ps1 --test-mode 250
 
-# Count only
-.\modules\backup-dev\backup-dev.ps1 --count
+# Full backup
+.\modules\backup-dev\backup-dev.ps1
 
 # Show help
 .\modules\backup-dev\backup-dev.ps1 --help
@@ -74,12 +69,11 @@ You can also call the script directly:
 
 | Option | Description |
 |--------|-------------|
-| `--test-mode [N]` | Quick test: list-only mode limited to N operations (N >= 100, default: 100) |
-| `--list-only` | Preview changes without actually copying/deleting files |
 | `--count` | Only count files and directories, then exit |
+| `--test-mode [N]` | Quick test: preview limited to N operations (N >= 100, default: 100) |
 | `--help` | Show help message |
 
-**Note:** `--test-mode` automatically enables `--list-only`. The `--count` option runs alone and ignores other switches.
+**Note:** The `--count` option runs alone and ignores other switches.
 
 ## How It Works
 
@@ -113,10 +107,9 @@ The backup-dev module integrates with console.ps1 through helper functions:
 
 - `Get-BackupScriptPath` - Locates the backup script
 - `Invoke-BackupScript` - Executes backup with specified arguments
-- `Start-BackupListOnly` - Runs list-only mode
+- `Start-BackupCountMode` - Runs count-only mode
 - `Start-BackupTestMode` - Runs test mode with user-provided limit
-- `Start-BackupCount` - Runs count-only mode
-- `Start-BackupFull` - Runs full backup with confirmation
+- `Start-BackupDevEnvironment` - Runs full backup with confirmation
 
 ## Troubleshooting
 
@@ -142,6 +135,23 @@ If you see "Config file not found", verify:
 
 ## Examples
 
+### Example: Count Mode
+
+```powershell
+PS C:\AppInstall\dev\powershell-console> .\modules\backup-dev\backup-dev.ps1 --count
+COUNT MODE - Only scanning source files
+
+Source Inventory vs. Changes
+───────────────────────────────────────────
+               Inventory   Need to Copy
+───────────────────────────────────────────
+  Directories:      1,234            45
+  Files:          123,456         1,234
+───────────────────────────────────────────
+  Total:          124,690         1,279
+───────────────────────────────────────────
+```
+
 ### Example: Test Mode
 
 ```powershell
@@ -151,15 +161,6 @@ Limit: 250 items
 
 Processing first 250 items...
 [Preview of operations...]
-```
-
-### Example: List-Only Mode
-
-```powershell
-PS C:\AppInstall\dev\powershell-console> .\modules\backup-dev\backup-dev.ps1 --list-only
-This will preview all changes without modifying any files.
-
-[Full preview of all operations...]
 ```
 
 ## Contributing

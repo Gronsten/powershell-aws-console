@@ -4,7 +4,6 @@
 
 # Parameters - Parse GNU-style arguments
 $testMode = $false
-$listOnly = $false
 $countOnly = $false
 $testModeLimit = 100  # Default limit for test mode
 
@@ -15,7 +14,6 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($arg) {
         "--test-mode" {
             $testMode = $true
-            $listOnly = $true  # Test mode automatically enables list-only
 
             # Check if next argument is a number
             if (($i + 1) -lt $args.Count) {
@@ -33,15 +31,13 @@ for ($i = 0; $i -lt $args.Count; $i++) {
                 }
             }
         }
-        "--list-only" { $listOnly = $true }
         "--count" { $countOnly = $true }
         "--help" {
             Write-Host "Usage: backup-dev.ps1 [OPTIONS]"
             Write-Host ""
             Write-Host "Options:"
-            Write-Host "  --test-mode [N]   Quick test: list-only mode limited to N operations"
+            Write-Host "  --test-mode [N]   Quick test: preview limited to N operations"
             Write-Host "                    N must be >= 100 (default: 100 if not specified)"
-            Write-Host "  --list-only       Preview changes without actually copying/deleting files"
             Write-Host "  --count           Only count files and directories, then exit"
             Write-Host "  --help            Show this help message"
             Write-Host ""
@@ -49,10 +45,9 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "  backup-dev.ps1 --test-mode       # Test with 100 items"
             Write-Host "  backup-dev.ps1 --test-mode 250   # Test with 250 items"
             Write-Host "  backup-dev.ps1 --test-mode 1000  # Test with 1000 items"
-            Write-Host "  backup-dev.ps1 --list-only       # Preview all changes"
+            Write-Host "  backup-dev.ps1 --count           # Quick count summary"
             Write-Host ""
-            Write-Host "Note: --test-mode automatically enables --list-only"
-            Write-Host "      --count runs alone and ignores other switches"
+            Write-Host "Note: --count runs alone and ignores other switches"
             exit 0
         }
         default {
@@ -62,9 +57,8 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "Usage: backup-dev.ps1 [OPTIONS]"
             Write-Host ""
             Write-Host "Options:"
-            Write-Host "  --test-mode [N]   Quick test: list-only mode limited to N operations"
+            Write-Host "  --test-mode [N]   Quick test: preview limited to N operations"
             Write-Host "                    N must be >= 100 (default: 100 if not specified)"
-            Write-Host "  --list-only       Preview changes without actually copying/deleting files"
             Write-Host "  --count           Only count files and directories, then exit"
             Write-Host "  --help            Show this help message"
             Write-Host ""
@@ -72,7 +66,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "  backup-dev.ps1 --test-mode       # Test with 100 items"
             Write-Host "  backup-dev.ps1 --test-mode 250   # Test with 250 items"
             Write-Host "  backup-dev.ps1 --test-mode 1000  # Test with 1000 items"
-            Write-Host "  backup-dev.ps1 --list-only       # Preview all changes"
+            Write-Host "  backup-dev.ps1 --count           # Quick count summary"
             Write-Host ""
             exit 1
         }
@@ -126,9 +120,6 @@ if ($countOnly) {
 } else {
     if ($testMode) {
         Write-Host "  TEST MODE - Limited to $testModeLimit operations" -ForegroundColor Yellow
-    }
-    if ($listOnly) {
-        Write-Host "  LIST-ONLY MODE - No files will be modified" -ForegroundColor Yellow
     }
     Write-Host "  Backup Started: $timestamp" -ForegroundColor Cyan
 }
@@ -342,19 +333,16 @@ Write-Host "Pass 2: Starting backup with progress tracking..." -ForegroundColor 
 
 # Start robocopy process in background
 $robocopyJob = Start-Job -ScriptBlock {
-    param($src, $dst, $log, $testMode, $listOnly)
+    param($src, $dst, $log, $testMode)
 
     # Build robocopy command with appropriate flags
     # /XJ excludes junction points (important for Scoop directories)
     $robocopyFlags = "/MIR /R:3 /W:5 /LOG+:$log /NP /NDL /ETA /XJ"
-    if ($listOnly) {
-        $robocopyFlags = "/L $robocopyFlags"  # Add list-only flag
-    }
 
     # Execute robocopy with the constructed flags
     $cmd = "robocopy `"$src`" `"$dst`" $robocopyFlags 2>&1"
     Invoke-Expression $cmd
-} -ArgumentList $source, $destination, $detailedLog, $testMode, $listOnly
+} -ArgumentList $source, $destination, $detailedLog, $testMode
 
 $lastProgress = Get-Date
 
@@ -435,11 +423,7 @@ Write-Host ""
 if ($testMode) {
     Write-Host "Test mode limit reached ($testModeLimit operations). Stopping backup..." -ForegroundColor Yellow
 }
-if ($listOnly) {
-    Write-Host "List-only scan complete! (No files were modified)" -ForegroundColor Green
-} else {
-    Write-Host "Backup complete!" -ForegroundColor Green
-}
+Write-Host "Backup complete!" -ForegroundColor Green
 Write-Host ""
 
 $endTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

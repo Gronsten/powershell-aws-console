@@ -1259,22 +1259,28 @@ function Show-InlineBatchSelection {
 
     $currentIndex = 0
     $done = $false
+    $firstDraw = $true
+
+    # Draw initial UI
+    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  $($Title.PadRight(42)) ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+    $moreAvailable = $TotalShown -lt $TotalAvailable
+    Write-Host "Showing $TotalShown of $TotalAvailable | Selected: $($AllSelections.Value.Count)" -ForegroundColor Yellow
+    Write-Host "Use Up/Down arrows, Space to select, Enter when done" -ForegroundColor Gray
+    if ($moreAvailable) {
+        Write-Host "Press M to save selections and fetch More, A for all, N for none, Q to cancel" -ForegroundColor Cyan
+    } else {
+        Write-Host "Press A to select all, N to deselect all, Q to cancel" -ForegroundColor Gray
+    }
+    Write-Host ""
+
+    $startLine = [Console]::CursorTop
 
     while (-not $done) {
-        Clear-Host
-        Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║  $($Title.PadRight(42)) ║" -ForegroundColor Cyan
-        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
-        $moreAvailable = $TotalShown -lt $TotalAvailable
-        Write-Host "Showing $TotalShown of $TotalAvailable | Selected: $($AllSelections.Value.Count)" -ForegroundColor Yellow
-        Write-Host "Use Up/Down arrows, Space to select, Enter when done" -ForegroundColor Gray
-        if ($moreAvailable) {
-            Write-Host "Press M to save selections and fetch More, A for all, N for none, Q to cancel`n" -ForegroundColor Cyan
-        } else {
-            Write-Host "Press A to select all, N to deselect all, Q to cancel`n" -ForegroundColor Gray
-        }
-
+        # Redraw selection list
+        [Console]::SetCursorPosition(0, $startLine)
         for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
             $item = $CurrentBatch[$i]
             $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
@@ -1282,7 +1288,8 @@ function Show-InlineBatchSelection {
             $color = if ($i -eq $currentIndex) { "Green" } else { "White" }
 
             $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
-            Write-Host "$arrow $checkbox $displayText" -ForegroundColor $color
+            # Clear line and write
+            Write-Host ("$arrow $checkbox $displayText" + (" " * 20)) -ForegroundColor $color
         }
 
         $key = [Console]::ReadKey($true)
@@ -1370,6 +1377,9 @@ function Search-Packages {
     } else {
         Write-Host "`nSearching installed packages for '$searchTerm'...`n" -ForegroundColor Cyan
     }
+
+    # Master collection for ALL package manager selections
+    $script:AllPackageSelections = @()
 
     # Get list of installed packages for highlighting when searching globally
     $installedScoop = @()

@@ -199,10 +199,14 @@ if ($testMode) {
 $countLog = Join-Path $scriptDir "temp_count_log.txt"
 
 # Run robocopy in list-only mode to count files
+# For count-only mode, use /E instead of /MIR to only count source files (not deletes)
+# For backup operations, /MIR will be used in Pass 2
+$robocopyMode = if ($countOnly) { "/E" } else { "/MIR" }
+
 $countJob = Start-Job -ScriptBlock {
-    param($src, $dst, $log)
-    robocopy $src $dst /L /MIR /R:0 /W:0 /LOG:$log /NP /NDL 2>&1
-} -ArgumentList $source, $destination, $countLog
+    param($src, $dst, $log, $mode)
+    robocopy $src $dst /L $mode /R:0 /W:0 /LOG:$log /NP /NDL 2>&1
+} -ArgumentList $source, $destination, $countLog, $robocopyMode
 
 $countStartTime = Get-Date
 $countLimitReached = $false
@@ -255,17 +259,23 @@ if (Test-Path $countLog) {
         # We want Copied + EXTRAS as these are the operations that will occur in Pass 2
         if ($logContent -match '(?m)^\s+Dirs\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Dirs: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
-            $script:totalDirsInSource = [int]$matches[1]
+            # Inventory = Copied + Skipped (what exists in source)
+            # Need to Copy = Copied + Extras (what would change in backup)
             $dirsCopied = [int]$matches[2]
+            $dirsSkipped = [int]$matches[3]
             $dirsExtras = [int]$matches[6]
+            $script:totalDirsInSource = $dirsCopied + $dirsSkipped
             $script:totalDirs = $dirsCopied + $dirsExtras
         }
 
         if ($logContent -match '(?m)^\s+Files\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Files: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
-            $script:totalFilesInSource = [int]$matches[1]
+            # Inventory = Copied + Skipped (what exists in source)
+            # Need to Copy = Copied + Extras (what would change in backup)
             $filesCopied = [int]$matches[2]
+            $filesSkipped = [int]$matches[3]
             $filesExtras = [int]$matches[6]
+            $script:totalFilesInSource = $filesCopied + $filesSkipped
             $script:totalFiles = $filesCopied + $filesExtras
         }
     }

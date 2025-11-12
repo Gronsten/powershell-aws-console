@@ -292,22 +292,32 @@ if ($countOnly) {
     Write-Host "  COUNT SUMMARY" -ForegroundColor Cyan
     Write-Separator
     Write-Host ""
-    Write-Host "                        Inventory       Need to Copy" -ForegroundColor Gray
-    Write-Host "                        ---------       ------------" -ForegroundColor DarkGray
-    Write-Host "  Directories:          " -NoNewline -ForegroundColor Cyan
-    Write-Host ("{0,9}" -f $script:totalDirsInSource) -NoNewline -ForegroundColor White
-    Write-Host "           " -NoNewline
-    Write-Host ("{0,9}" -f $script:totalDirs) -ForegroundColor Yellow
-    Write-Host "  Files:                " -NoNewline -ForegroundColor Cyan
-    Write-Host ("{0,9}" -f $script:totalFilesInSource) -NoNewline -ForegroundColor White
-    Write-Host "           " -NoNewline
-    Write-Host ("{0,9}" -f $script:totalFiles) -ForegroundColor Yellow
+    Write-Host "                      Inventory    Need to Copy" -ForegroundColor Gray
+    Write-Host "                      ---------    ------------" -ForegroundColor DarkGray
+
+    # Format numbers with commas for readability
+    $dirsInventory = "{0,12:N0}" -f $script:totalDirsInSource
+    $dirsChanged = "{0,15:N0}" -f $script:totalDirs
+    $filesInventory = "{0,12:N0}" -f $script:totalFilesInSource
+    $filesChanged = "{0,15:N0}" -f $script:totalFiles
+    $totalInventory = "{0,12:N0}" -f $inventoryItems
+    $totalChanged = "{0,15:N0}" -f $changedItems
+
+    Write-Host "  Directories: " -NoNewline -ForegroundColor Cyan
+    Write-Host $dirsInventory -NoNewline -ForegroundColor White
+    Write-Host $dirsChanged -ForegroundColor Yellow
+
+    Write-Host "  Files:       " -NoNewline -ForegroundColor Cyan
+    Write-Host $filesInventory -NoNewline -ForegroundColor White
+    Write-Host $filesChanged -ForegroundColor Yellow
+
     Write-Host "  " -NoNewline
-    Write-Host ("─" * 46) -ForegroundColor DarkGray
-    Write-Host "  Total:                " -NoNewline -ForegroundColor Cyan
-    Write-Host ("{0,9}" -f $inventoryItems) -NoNewline -ForegroundColor White
-    Write-Host "           " -NoNewline
-    Write-Host ("{0,9}" -f $changedItems) -ForegroundColor Yellow
+    Write-Host ("─" * 43) -ForegroundColor DarkGray
+
+    Write-Host "  Total:       " -NoNewline -ForegroundColor Cyan
+    Write-Host $totalInventory -NoNewline -ForegroundColor White
+    Write-Host $totalChanged -ForegroundColor Yellow
+
     Write-Host ""
     Write-Host "  Runtime: $runtimeFormatted" -ForegroundColor Gray
     Write-Separator

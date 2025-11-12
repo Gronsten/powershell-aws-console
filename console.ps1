@@ -2488,21 +2488,21 @@ function Start-MerakiBackup {
 
 function Start-CodeCount {
     # Use $PSScriptRoot to get the actual script directory
-    $countScriptPath = Join-Path $PSScriptRoot "count-lines.py"
+    $countScriptPath = Join-Path $PSScriptRoot "scripts\count-lines.py"
 
     # Check if Python is available
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if (-not $pythonCmd) {
         Write-Host "`nPython not found in PATH. Please ensure Python is installed." -ForegroundColor Red
         pause
-        return
+        return  # This is a hard error, exit to main menu
     }
 
     # Check if count-lines.py exists
     if (-not (Test-Path $countScriptPath)) {
         Write-Host "`ncount-lines.py not found at: $countScriptPath" -ForegroundColor Red
         pause
-        return
+        return  # This is a hard error, exit to main menu
     }
 
     # Initialize navigation state
@@ -2677,8 +2677,7 @@ function Start-CodeCount {
                 }
                 'Q' {
                     Write-Host "`nCancelled." -ForegroundColor Yellow
-                    pause
-                    return
+                    return  # User cancelled, exit to main menu
                 }
             }
         }
@@ -2704,6 +2703,7 @@ function Start-CodeCount {
     if ($selectedItems.Count -eq 0 -and -not $countAll) {
         Write-Host "`nNo items selected." -ForegroundColor Yellow
         pause
+        Start-CodeCount
         return
     }
 
@@ -2715,29 +2715,57 @@ function Start-CodeCount {
     # Count all projects if selected
     if ($countAll) {
         Write-Host "Counting: All Projects" -ForegroundColor Yellow
-        Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+        Write-Host "Executing: python $countScriptPath `"$devRoot`"" -ForegroundColor Gray
         Write-Host ""
-        python $countScriptPath
+        python $countScriptPath "$devRoot"
         Write-Host ""
+
+        # If there are also individual items selected, pause before showing them
+        if ($selectedItems.Count -gt 0) {
+            Write-Host "Press Enter to view individual project counts..." -ForegroundColor Gray
+            Read-Host
+        }
     }
 
-    # Count each selected item
+    # Count each selected item with pagination
+    $itemCount = $selectedItems.Count
+    $currentItem = 0
     foreach ($itemPath in $selectedItems) {
+        $currentItem++
         $relativePath = $itemPath.Replace($devRoot + "\", "")
+
+        Write-Host "───────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "Project $currentItem of $itemCount" -ForegroundColor Gray
+        Write-Host "───────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host ""
+
         Write-Host "Counting: $relativePath" -ForegroundColor Yellow
         Write-Host "Executing: python $countScriptPath `"$itemPath`"" -ForegroundColor Gray
         Write-Host ""
         python $countScriptPath "$itemPath"
         Write-Host ""
+
+        # Pause between items (but not after the last one)
+        if ($currentItem -lt $itemCount) {
+            Write-Host "Press Enter to continue (or Q to quit viewing more)..." -ForegroundColor Gray -NoNewline
+            $key = [Console]::ReadKey($true)
+            Write-Host ""  # New line after key press
+
+            if ($key.Key -eq 'Q') {
+                Write-Host "`nSkipping remaining projects..." -ForegroundColor Yellow
+                break
+            }
+        }
     }
 
     pause
+    Start-CodeCount
 }
 
 # Helper function to get backup script path
 function Get-BackupScriptPath {
     # Use $PSScriptRoot to get the actual script directory (handles project renames automatically)
-    $backupScriptPath = Join-Path $PSScriptRoot "backup-dev.ps1"
+    $backupScriptPath = Join-Path $PSScriptRoot "modules\backup-dev\backup-dev.ps1"
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
@@ -2784,16 +2812,6 @@ function Invoke-BackupScript {
     pause
 }
 
-function Start-BackupListOnly {
-    Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  BACKUP - LIST-ONLY MODE                   ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
-    Write-Host "This will preview all changes without modifying any files." -ForegroundColor Yellow
-    Write-Host ""
-
-    Invoke-BackupScript -Arguments @("--list-only") -Description "List-only scan"
-}
 
 function Start-BackupTestMode {
     Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -2850,14 +2868,11 @@ function Start-BackupDevEnvironment {
 function Show-BackupDevMenu {
     # Define backup submenu
     $defaultMenu = @(
-        (New-MenuAction "List-Only Mode (Preview)" {
-            Start-BackupListOnly
+        (New-MenuAction "Count Mode (Quantify Source)" {
+            Start-BackupCountMode
         }),
         (New-MenuAction "Test Mode (Limited Preview)" {
             Start-BackupTestMode
-        }),
-        (New-MenuAction "Count Mode (Quantify Source)" {
-            Start-BackupCountMode
         }),
         (New-MenuAction "Full Backup" {
             Start-BackupDevEnvironment

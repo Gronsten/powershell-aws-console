@@ -24,6 +24,7 @@ configs/
 *.log
 logs/
 backup-log.txt
+temp_count_log.txt
 
 # Windows system files
 Thumbs.db

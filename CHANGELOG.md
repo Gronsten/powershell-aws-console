@@ -20,6 +20,48 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.4.0 (2025-11-12)
+
+**Project Structure Improvements**
+
+Reorganized project structure to improve modularity, maintainability, and clarity by consolidating utility scripts and modules into dedicated directories.
+
+**Changes:**
+- **Modularized backup-dev**: Moved `backup-dev.ps1` to `modules/backup-dev/` directory
+  - Created `modules/backup-dev/README.md` with comprehensive documentation
+  - Updated path references in `console.ps1` to use new module location
+  - Log files now stored in module directory (`modules/backup-dev/backup-dev.log` and `modules/backup-dev/backup-history.log`)
+  - Config file continues to be read from project root
+  - **Simplified backup modes** by removing redundant list-only mode
+    - Count mode provides fast summary statistics
+    - Test mode provides limited preview with file-by-file details
+    - List-only was duplicative and slow
+  - Added `/XJ` flag to exclude junction points (fixes inflated counts in Scoop directories)
+  - Enhanced count mode with inventory comparison (total items vs. items needing backup)
+- **Moved count-lines to scripts**: Relocated `count-lines.py` to `scripts/` directory
+  - Updated path reference in `console.ps1` to use new location
+  - Aligns with existing pattern (e.g., `scripts/aws-logout.ps1` from v1.3.1)
+- **Project Structure**: Improved organization following modular patterns
+  - `modules/` - PowerShell modules with self-contained functionality
+  - `scripts/` - Utility scripts called by console.ps1
+
+**Migration Notes:**
+- **Breaking change**: List-only mode has been removed from backup-dev
+  - Use count mode (`--count`) for fast summary statistics
+  - Use test mode (`--test-mode`) for limited preview with file details
+- Paths are automatically resolved using `$PSScriptRoot`
+- Config file remains in project root
+- Backup logs now stored in `modules/backup-dev/` for better organization
+- Users calling scripts directly should update paths:
+  - Old: `.\count-lines.py` → New: `.\scripts\count-lines.py`
+  - Old: `.\backup-dev.ps1` → New: `.\modules\backup-dev\backup-dev.ps1`
+
+**Benefits:**
+- Clearer project organization
+- Easier to locate and maintain utility scripts
+- Sets pattern for future modularization
+- Follows established conventions from aws-prompt-indicator module (v1.3.0)
+
 ### v1.3.2 (2025-11-11)
 
 **Main Script Renamed**

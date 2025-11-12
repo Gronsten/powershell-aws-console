@@ -4,7 +4,6 @@
 
 # Parameters - Parse GNU-style arguments
 $testMode = $false
-$listOnly = $false
 $countOnly = $false
 $testModeLimit = 100  # Default limit for test mode
 
@@ -15,7 +14,6 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($arg) {
         "--test-mode" {
             $testMode = $true
-            $listOnly = $true  # Test mode automatically enables list-only
 
             # Check if next argument is a number
             if (($i + 1) -lt $args.Count) {
@@ -33,15 +31,13 @@ for ($i = 0; $i -lt $args.Count; $i++) {
                 }
             }
         }
-        "--list-only" { $listOnly = $true }
         "--count" { $countOnly = $true }
         "--help" {
             Write-Host "Usage: backup-dev.ps1 [OPTIONS]"
             Write-Host ""
             Write-Host "Options:"
-            Write-Host "  --test-mode [N]   Quick test: list-only mode limited to N operations"
+            Write-Host "  --test-mode [N]   Quick test: preview limited to N operations"
             Write-Host "                    N must be >= 100 (default: 100 if not specified)"
-            Write-Host "  --list-only       Preview changes without actually copying/deleting files"
             Write-Host "  --count           Only count files and directories, then exit"
             Write-Host "  --help            Show this help message"
             Write-Host ""
@@ -49,10 +45,9 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "  backup-dev.ps1 --test-mode       # Test with 100 items"
             Write-Host "  backup-dev.ps1 --test-mode 250   # Test with 250 items"
             Write-Host "  backup-dev.ps1 --test-mode 1000  # Test with 1000 items"
-            Write-Host "  backup-dev.ps1 --list-only       # Preview all changes"
+            Write-Host "  backup-dev.ps1 --count           # Quick count summary"
             Write-Host ""
-            Write-Host "Note: --test-mode automatically enables --list-only"
-            Write-Host "      --count runs alone and ignores other switches"
+            Write-Host "Note: --count runs alone and ignores other switches"
             exit 0
         }
         default {
@@ -62,9 +57,8 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "Usage: backup-dev.ps1 [OPTIONS]"
             Write-Host ""
             Write-Host "Options:"
-            Write-Host "  --test-mode [N]   Quick test: list-only mode limited to N operations"
+            Write-Host "  --test-mode [N]   Quick test: preview limited to N operations"
             Write-Host "                    N must be >= 100 (default: 100 if not specified)"
-            Write-Host "  --list-only       Preview changes without actually copying/deleting files"
             Write-Host "  --count           Only count files and directories, then exit"
             Write-Host "  --help            Show this help message"
             Write-Host ""
@@ -72,7 +66,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
             Write-Host "  backup-dev.ps1 --test-mode       # Test with 100 items"
             Write-Host "  backup-dev.ps1 --test-mode 250   # Test with 250 items"
             Write-Host "  backup-dev.ps1 --test-mode 1000  # Test with 1000 items"
-            Write-Host "  backup-dev.ps1 --list-only       # Preview all changes"
+            Write-Host "  backup-dev.ps1 --count           # Quick count summary"
             Write-Host ""
             exit 1
         }
@@ -85,8 +79,13 @@ function Write-Separator {
 }
 
 # Load configuration
+# $scriptDir is modules/backup-dev/
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$configPath = Join-Path $scriptDir "config.json"
+# Go up one level from scriptDir: modules/backup-dev/ -> modules/
+$modulesDir = Split-Path -Parent $scriptDir
+# Go up one more level: modules/ -> powershell-console/
+$rootDir = Split-Path -Parent $modulesDir
+$configPath = Join-Path $rootDir "config.json"
 
 if (-not (Test-Path $configPath)) {
     Write-Error "Config file not found at: $configPath"
@@ -100,7 +99,7 @@ $config = Get-Content $configPath -Raw | ConvertFrom-Json
 $source = $config.paths.backupSource
 $destination = Join-Path $env:USERPROFILE $config.paths.backupDestination
 
-# Define log files
+# Define log files (in module directory)
 $detailedLog = Join-Path $scriptDir "backup-dev.log"
 $summaryLog = Join-Path $scriptDir "backup-history.log"
 
@@ -121,9 +120,6 @@ if ($countOnly) {
 } else {
     if ($testMode) {
         Write-Host "  TEST MODE - Limited to $testModeLimit operations" -ForegroundColor Yellow
-    }
-    if ($listOnly) {
-        Write-Host "  LIST-ONLY MODE - No files will be modified" -ForegroundColor Yellow
     }
     Write-Host "  Backup Started: $timestamp" -ForegroundColor Cyan
 }
@@ -194,10 +190,14 @@ if ($testMode) {
 $countLog = Join-Path $scriptDir "temp_count_log.txt"
 
 # Run robocopy in list-only mode to count files
+# For count-only mode, use /E instead of /MIR to only count source files (not deletes)
+# For backup operations, /MIR will be used in Pass 2
+$robocopyMode = if ($countOnly) { "/E" } else { "/MIR" }
+
 $countJob = Start-Job -ScriptBlock {
-    param($src, $dst, $log)
-    robocopy $src $dst /L /MIR /R:0 /W:0 /LOG:$log /NP /NDL 2>&1
-} -ArgumentList $source, $destination, $countLog
+    param($src, $dst, $log, $mode)
+    robocopy $src $dst /L $mode /R:0 /W:0 /LOG:$log /NP /NDL /XJ 2>&1
+} -ArgumentList $source, $destination, $countLog, $robocopyMode
 
 $countStartTime = Get-Date
 $countLimitReached = $false
@@ -250,15 +250,29 @@ if (Test-Path $countLog) {
         # We want Copied + EXTRAS as these are the operations that will occur in Pass 2
         if ($logContent -match '(?m)^\s+Dirs\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Dirs: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $dirsTotal = [int]$matches[1]
             $dirsCopied = [int]$matches[2]
+            $dirsSkipped = [int]$matches[3]
             $dirsExtras = [int]$matches[6]
+
+            # For inventory: use robocopy's "Total" column which is the source count
+            # This matches what Windows Explorer shows
+            $script:totalDirsInSource = $dirsTotal
+            # For "Need to Copy": operations that would occur (new/modified + deletes)
             $script:totalDirs = $dirsCopied + $dirsExtras
         }
 
         if ($logContent -match '(?m)^\s+Files\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Files: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $filesTotal = [int]$matches[1]
             $filesCopied = [int]$matches[2]
+            $filesSkipped = [int]$matches[3]
             $filesExtras = [int]$matches[6]
+
+            # For inventory: use robocopy's "Total" column which is the source count
+            # This matches what Windows Explorer shows
+            $script:totalFilesInSource = $filesTotal
+            # For "Need to Copy": operations that would occur (new/modified + deletes)
             $script:totalFiles = $filesCopied + $filesExtras
         }
     }
@@ -274,21 +288,42 @@ if ($testMode -and $countLimitReached) {
 
 # If count-only mode, display summary and exit
 if ($countOnly) {
-    $totalItems = $script:totalDirs + $script:totalFiles
+    $changedItems = $script:totalDirs + $script:totalFiles
+    $inventoryItems = $script:totalDirsInSource + $script:totalFilesInSource
     $scriptEndTime = Get-Date
     $totalRuntime = $scriptEndTime - $scriptStartTime
     $runtimeFormatted = "{0:mm\:ss}" -f $totalRuntime
 
     Write-Host ""
     Write-Separator
-    Write-Host "  Total Directories: " -NoNewline -ForegroundColor Cyan
-    Write-Host "$script:totalDirs" -ForegroundColor White
-    Write-Host "  Total Files:       " -NoNewline -ForegroundColor Cyan
-    Write-Host "$script:totalFiles" -ForegroundColor White
-    Write-Host "  Total Items:       " -NoNewline -ForegroundColor Cyan
-    Write-Host "$totalItems" -ForegroundColor White
-    Write-Host "  Total Runtime:     " -NoNewline -ForegroundColor Cyan
-    Write-Host "$runtimeFormatted" -ForegroundColor White
+    Write-Host "  COUNT SUMMARY" -ForegroundColor Cyan
+    Write-Separator
+    Write-Host ""
+    Write-Host "                    Inventory    Need to Copy" -ForegroundColor Gray
+    Write-Host "                    ---------    ------------" -ForegroundColor DarkGray
+
+    # Format numbers with right-alignment and commas
+    # Using fixed-width format strings for consistent alignment
+    Write-Host "  " -NoNewline
+    Write-Host ("{0,-14}" -f "Directories:") -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,13:N0}" -f $script:totalDirsInSource) -NoNewline -ForegroundColor White
+    Write-Host ("{0,12:N0}" -f $script:totalDirs) -ForegroundColor Yellow
+
+    Write-Host "  " -NoNewline
+    Write-Host ("{0,-14}" -f "Files:") -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,13:N0}" -f $script:totalFilesInSource) -NoNewline -ForegroundColor White
+    Write-Host ("{0,12:N0}" -f $script:totalFiles) -ForegroundColor Yellow
+
+    Write-Host "  " -NoNewline
+    Write-Host ("─" * 41) -ForegroundColor DarkGray
+
+    Write-Host "  " -NoNewline
+    Write-Host ("{0,-14}" -f "Total:") -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,13:N0}" -f $inventoryItems) -NoNewline -ForegroundColor White
+    Write-Host ("{0,12:N0}" -f $changedItems) -ForegroundColor Yellow
+
+    Write-Host ""
+    Write-Host "  Runtime: $runtimeFormatted" -ForegroundColor Gray
     Write-Separator
     exit 0
 }
@@ -298,18 +333,16 @@ Write-Host "Pass 2: Starting backup with progress tracking..." -ForegroundColor 
 
 # Start robocopy process in background
 $robocopyJob = Start-Job -ScriptBlock {
-    param($src, $dst, $log, $testMode, $listOnly)
+    param($src, $dst, $log, $testMode)
 
     # Build robocopy command with appropriate flags
-    $robocopyFlags = "/MIR /R:3 /W:5 /LOG+:$log /NP /NDL /ETA"
-    if ($listOnly) {
-        $robocopyFlags = "/L $robocopyFlags"  # Add list-only flag
-    }
+    # /XJ excludes junction points (important for Scoop directories)
+    $robocopyFlags = "/MIR /R:3 /W:5 /LOG+:$log /NP /NDL /ETA /XJ"
 
     # Execute robocopy with the constructed flags
     $cmd = "robocopy `"$src`" `"$dst`" $robocopyFlags 2>&1"
     Invoke-Expression $cmd
-} -ArgumentList $source, $destination, $detailedLog, $testMode, $listOnly
+} -ArgumentList $source, $destination, $detailedLog, $testMode
 
 $lastProgress = Get-Date
 
@@ -390,11 +423,7 @@ Write-Host ""
 if ($testMode) {
     Write-Host "Test mode limit reached ($testModeLimit operations). Stopping backup..." -ForegroundColor Yellow
 }
-if ($listOnly) {
-    Write-Host "List-only scan complete! (No files were modified)" -ForegroundColor Green
-} else {
-    Write-Host "Backup complete!" -ForegroundColor Green
-}
+Write-Host "Backup complete!" -ForegroundColor Green
 Write-Host ""
 
 $endTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

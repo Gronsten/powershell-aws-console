@@ -161,10 +161,11 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     print("="*70)
 
 if __name__ == '__main__':
-    # Dev root for exclusion rules - auto-detect from script location or use current directory
-    # Assumes script is in a project directory under your dev root
+    # Dev root for exclusion rules - auto-detect from script location
+    # Script is in powershell-console/scripts/, so dev root is two levels up
     script_dir = Path(__file__).resolve().parent
-    dev_root = script_dir.parent if script_dir.parent.name != script_dir.name else script_dir
+    # Go up two levels: scripts/ -> powershell-console/ -> dev/
+    dev_root = script_dir.parent.parent
 
     # Parse command line arguments
     if len(sys.argv) > 1:

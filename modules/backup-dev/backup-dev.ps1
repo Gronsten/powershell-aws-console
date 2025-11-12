@@ -292,8 +292,8 @@ if ($countOnly) {
     Write-Host "  COUNT SUMMARY" -ForegroundColor Cyan
     Write-Separator
     Write-Host ""
-    Write-Host "                           Inventory    Need to Copy" -ForegroundColor Gray
-    Write-Host "                           ---------    ------------" -ForegroundColor DarkGray
+    Write-Host "                    Inventory    Need to Copy" -ForegroundColor Gray
+    Write-Host "                    ---------    ------------" -ForegroundColor DarkGray
 
     # Format numbers with right-alignment and commas
     # Using fixed-width format strings for consistent alignment

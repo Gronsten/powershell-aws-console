@@ -85,8 +85,12 @@ function Write-Separator {
 }
 
 # Load configuration
+# $scriptDir is modules/backup-dev/
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$rootDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Go up one level from scriptDir: modules/backup-dev/ -> modules/
+$modulesDir = Split-Path -Parent $scriptDir
+# Go up one more level: modules/ -> powershell-console/
+$rootDir = Split-Path -Parent $modulesDir
 $configPath = Join-Path $rootDir "config.json"
 
 if (-not (Test-Path $configPath)) {

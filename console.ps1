@@ -2702,12 +2702,8 @@ function Start-CodeCount {
 
     if ($selectedItems.Count -eq 0 -and -not $countAll) {
         Write-Host "`nNo items selected." -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "Try again? (Y/N): " -ForegroundColor Yellow -NoNewline
-        $response = Read-Host
-        if ($response -match '^[Yy]') {
-            Start-CodeCount
-        }
+        pause
+        Start-CodeCount
         return
     }
 
@@ -2735,12 +2731,8 @@ function Start-CodeCount {
         Write-Host ""
     }
 
-    Write-Host ""
-    Write-Host "Count another project? (Y/N): " -ForegroundColor Yellow -NoNewline
-    $response = Read-Host
-    if ($response -match '^[Yy]') {
-        Start-CodeCount
-    }
+    pause
+    Start-CodeCount
 }
 
 # Helper function to get backup script path

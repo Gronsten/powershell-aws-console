@@ -2734,11 +2734,10 @@ function Start-CodeCount {
         $currentItem++
         $relativePath = $itemPath.Replace($devRoot + "\", "")
 
-        Clear-Host
-        Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║  CODE LINE COUNTER - RESULTS               ║" -ForegroundColor Cyan
-        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-        Write-Host "Project $currentItem of $itemCount`n" -ForegroundColor Gray
+        Write-Host "───────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "Project $currentItem of $itemCount" -ForegroundColor Gray
+        Write-Host "───────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host ""
 
         Write-Host "Counting: $relativePath" -ForegroundColor Yellow
         Write-Host "Executing: python $countScriptPath `"$itemPath`"" -ForegroundColor Gray
@@ -2748,8 +2747,14 @@ function Start-CodeCount {
 
         # Pause between items (but not after the last one)
         if ($currentItem -lt $itemCount) {
-            Write-Host "Press Enter to continue to next project..." -ForegroundColor Gray
-            Read-Host
+            Write-Host "Press Enter to continue (or Q to quit viewing more)..." -ForegroundColor Gray -NoNewline
+            $key = [Console]::ReadKey($true)
+            Write-Host ""  # New line after key press
+
+            if ($key.Key -eq 'Q') {
+                Write-Host "`nSkipping remaining projects..." -ForegroundColor Yellow
+                break
+            }
         }
     }
 

@@ -259,23 +259,29 @@ if (Test-Path $countLog) {
         # We want Copied + EXTRAS as these are the operations that will occur in Pass 2
         if ($logContent -match '(?m)^\s+Dirs\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Dirs: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
-            # Inventory = Copied + Skipped (what exists in source)
-            # Need to Copy = Copied + Extras (what would change in backup)
+            $dirsTotal = [int]$matches[1]
             $dirsCopied = [int]$matches[2]
             $dirsSkipped = [int]$matches[3]
             $dirsExtras = [int]$matches[6]
-            $script:totalDirsInSource = $dirsCopied + $dirsSkipped
+
+            # For inventory: use robocopy's "Total" column which is the source count
+            # This matches what Windows Explorer shows
+            $script:totalDirsInSource = $dirsTotal
+            # For "Need to Copy": operations that would occur (new/modified + deletes)
             $script:totalDirs = $dirsCopied + $dirsExtras
         }
 
         if ($logContent -match '(?m)^\s+Files\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Files: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
-            # Inventory = Copied + Skipped (what exists in source)
-            # Need to Copy = Copied + Extras (what would change in backup)
+            $filesTotal = [int]$matches[1]
             $filesCopied = [int]$matches[2]
             $filesSkipped = [int]$matches[3]
             $filesExtras = [int]$matches[6]
-            $script:totalFilesInSource = $filesCopied + $filesSkipped
+
+            # For inventory: use robocopy's "Total" column which is the source count
+            # This matches what Windows Explorer shows
+            $script:totalFilesInSource = $filesTotal
+            # For "Need to Copy": operations that would occur (new/modified + deletes)
             $script:totalFiles = $filesCopied + $filesExtras
         }
     }

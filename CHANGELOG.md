@@ -58,15 +58,16 @@ Added powerful multi-select capability to package search functionality, allowing
 
 **Example Workflow:**
 ```powershell
-# npm workflow (with batched metadata fetching)
+# npm workflow (inline batch selection - TRUE Option B!)
 1. Search: Enter "webpack" → Select "Globally available"
-2. Fetching: "Found 50 packages, fetching metadata..."
-3. Batched loading: "Fetching batch 1 of 3..." (shows progress)
-4. Prompt: "Fetch more? (Y/n)" - user can stop early or fetch all
-5. Summary: "Metadata fetched for 50 packages, 48 available to install"
-6. Checkbox UI appears immediately with all fetched packages
-7. Navigate, select multiple packages (Space/A/N), press Enter
-8. Installation runs with progress for each package
+2. Status: "Found 50 packages"
+3. Fetching: "Fetching metadata for batch 1..."
+4. Checkbox UI appears IMMEDIATELY with first 20 packages ✨
+5. User selects packages from batch 1 (↑↓/Space to toggle)
+6. User presses M (More) to save selections and fetch next batch
+7. Batch 2 loads, user selects more packages, presses M again
+8. ... continues until user presses Enter (done) or Q (cancel)
+9. Installation runs for ALL selected packages across all batches
 
 # Scoop/PyPI workflow (instant results)
 1. Search: Enter search term → Select "Globally available"
@@ -76,11 +77,12 @@ Added powerful multi-select capability to package search functionality, allowing
 ```
 
 **Key Improvements:**
-- ✨ **No extra prompts** - checkbox selection happens automatically
-- ⚡ **Faster workflow** - goes straight to selection after fetching
-- 📊 **Better visibility** - see all results before deciding
-- 🎯 **npm optimization** - batched fetching with progress, user can stop early
-- 🚀 **Scoop/PyPI optimization** - instant selection (no batching needed)
+- 🎯 **Inline selection** - No separate screens! Select as you browse each batch
+- ⚡ **Responsive** - See and select from first batch immediately
+- 📦 **Persistent selections** - Selections remembered across batches
+- 🔄 **Progressive loading** - Press M to fetch more, Enter when done
+- 📊 **Status tracking** - Shows "Showing X of Y | Selected: Z"
+- ⏭️ **User control** - Stop early or fetch all batches as needed
 
 ### v1.4.0 (2025-11-12)
 

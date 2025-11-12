@@ -1223,6 +1223,130 @@ function Show-CheckboxSelection {
     return $selected
 }
 
+function Show-InlineBatchSelection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$CurrentBatch,
+
+        [Parameter(Mandatory=$true)]
+        [ref]$AllSelections,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Title,
+
+        [Parameter(Mandatory=$false)]
+        [int]$BatchNumber = 1,
+
+        [Parameter(Mandatory=$false)]
+        [int]$TotalShown = 0,
+
+        [Parameter(Mandatory=$false)]
+        [int]$TotalAvailable = 0
+    )
+
+    if ($CurrentBatch.Count -eq 0) {
+        return @{
+            Continue = $false
+            FetchMore = $false
+        }
+    }
+
+    $selectedIndexes = @()
+    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+        $selectedIndexes += $false
+    }
+
+    $currentIndex = 0
+    $done = $false
+
+    while (-not $done) {
+        Clear-Host
+        Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+        Write-Host "║  $($Title.PadRight(42)) ║" -ForegroundColor Cyan
+        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+        $moreAvailable = $TotalShown -lt $TotalAvailable
+        Write-Host "Showing $TotalShown of $TotalAvailable | Selected: $($AllSelections.Value.Count)" -ForegroundColor Yellow
+        Write-Host "Use Up/Down arrows, Space to select, Enter when done" -ForegroundColor Gray
+        if ($moreAvailable) {
+            Write-Host "Press M to save selections and fetch More, A for all, N for none, Q to cancel`n" -ForegroundColor Cyan
+        } else {
+            Write-Host "Press A to select all, N to deselect all, Q to cancel`n" -ForegroundColor Gray
+        }
+
+        for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+            $item = $CurrentBatch[$i]
+            $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
+            $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
+            $color = if ($i -eq $currentIndex) { "Green" } else { "White" }
+
+            $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
+            Write-Host "$arrow $checkbox $displayText" -ForegroundColor $color
+        }
+
+        $key = [Console]::ReadKey($true)
+
+        switch ($key.Key) {
+            'UpArrow' {
+                $currentIndex = ($currentIndex - 1 + $CurrentBatch.Count) % $CurrentBatch.Count
+            }
+            'DownArrow' {
+                $currentIndex = ($currentIndex + 1) % $CurrentBatch.Count
+            }
+            'Spacebar' {
+                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+            }
+            'A' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $true
+                }
+            }
+            'N' {
+                for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
+                    $selectedIndexes[$i] = $false
+                }
+            }
+            'M' {
+                if ($moreAvailable) {
+                    # Add selections from this batch
+                    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+                        if ($selectedIndexes[$i]) {
+                            $AllSelections.Value += $CurrentBatch[$i]
+                        }
+                    }
+                    return @{
+                        Continue = $true
+                        FetchMore = $true
+                    }
+                }
+            }
+            'Enter' {
+                $done = $true
+            }
+            'Q' {
+                return @{
+                    Continue = $false
+                    FetchMore = $false
+                    Cancelled = $true
+                }
+            }
+        }
+    }
+
+    # Add final selections from this batch
+    for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
+        if ($selectedIndexes[$i]) {
+            $AllSelections.Value += $CurrentBatch[$i]
+        }
+    }
+
+    return @{
+        Continue = $true
+        FetchMore = $false
+    }
+}
+
 function Search-Packages {
     [CmdletBinding()]
     param()
@@ -1550,17 +1674,19 @@ function Search-Packages {
                 } else {
                     # Show total matches found
                     Write-Host "  Found $($sortedMatches.Count) matching packages" -ForegroundColor Cyan
-                    Write-Host "  Fetching package metadata..." -ForegroundColor Gray
                     Write-Host ""
 
-                    # Collect ALL packages with metadata first (for interactive selection)
-                    $npmSearchResults = @()
+                    # Track all selections across batches
+                    $allSelections = @()
+                    $allSelectionsRef = [ref]$allSelections
 
-                    # Fetch metadata in batches for performance
+                    # Fetch and display metadata in batches with inline selection
                     $batchSize = 20
                     $startIndex = 0
+                    $batchNumber = 1
+                    $continueSearching = $true
 
-                    while ($startIndex -lt $sortedMatches.Count) {
+                    while ($continueSearching -and $startIndex -lt $sortedMatches.Count) {
                         # Get next batch (prioritize non-scoped first)
                         $remainingMatches = $sortedMatches | Select-Object -Skip $startIndex
                         $nonScoped = $remainingMatches | Where-Object { -not $_.StartsWith('@') } | Select-Object -First $batchSize
@@ -1569,8 +1695,7 @@ function Search-Packages {
 
                         if ($currentBatch.Count -eq 0) { break }
 
-                        # Show progress
-                        Write-Host "  Fetching batch $([Math]::Ceiling(($startIndex + 1) / $batchSize)) of $([Math]::Ceiling($sortedMatches.Count / $batchSize))..." -ForegroundColor Gray
+                        Write-Host "  Fetching metadata for batch $batchNumber..." -ForegroundColor Gray
 
                         # Fetch package metadata in parallel using runspaces for better performance
                         $runspacePool = [runspacefactory]::CreateRunspacePool(1, 20)
@@ -1621,90 +1746,73 @@ function Search-Packages {
                         $runspacePool.Close()
                         $runspacePool.Dispose()
 
-                        # Collect package metadata (no display yet)
+                        # Build batch of package objects for inline selection
+                        $batchPackages = @()
                         foreach ($pkgName in $currentBatch) {
                             $result = $results[$pkgName]
                             $isInstalled = $installedNpm -contains $pkgName
 
-                            if ($result -and $result.success) {
+                            if ($result -and $result.success -and -not $isInstalled) {
                                 $version = $result.version
                                 $description = if ($result.description) { $result.description } else { "" }
 
                                 # Truncate description for display
                                 $descriptionShort = if ($description.Length -gt 40) { $description.Substring(0, 37) + "..." } else { $description }
 
-                                # Add to results collection
-                                $npmSearchResults += @{
+                                $batchPackages += @{
                                     Manager = "npm"
                                     Name = $pkgName
                                     Version = $version
                                     Description = $description
-                                    Installed = $isInstalled
-                                    DisplayText = if ($isInstalled) {
-                                        "[ ] $pkgName - $version - $descriptionShort [INSTALLED]"
-                                    } else {
-                                        "[ ] $pkgName - $version - $descriptionShort"
-                                    }
+                                    DisplayText = "$pkgName - $version - $descriptionShort"
                                 }
                             }
                         }
 
                         $startIndex += $currentBatch.Count
 
-                        # Ask if user wants to fetch more results
-                        if ($startIndex -lt $sortedMatches.Count) {
-                            $remaining = $sortedMatches.Count - $startIndex
-                            Write-Host ""
-                            Write-Host "  Fetched $startIndex of $($sortedMatches.Count) packages. $remaining more available." -ForegroundColor Yellow
-                            $response = Read-Host "  Fetch more? (Y/n)"
-                            if ($response -match '^[Nn]') {
-                                break
+                        # Show inline batch selection if we have packages
+                        if ($batchPackages.Count -gt 0) {
+                            $result = Show-InlineBatchSelection `
+                                -CurrentBatch $batchPackages `
+                                -AllSelections $allSelectionsRef `
+                                -Title "SELECT NPM PACKAGES (BATCH $batchNumber)" `
+                                -BatchNumber $batchNumber `
+                                -TotalShown $startIndex `
+                                -TotalAvailable $sortedMatches.Count
+
+                            if ($result.Cancelled) {
+                                $continueSearching = $false
+                            } elseif (-not $result.FetchMore) {
+                                $continueSearching = $false
                             }
-                            Write-Host ""
                         }
+
+                        $batchNumber++
                     }
 
-                    Write-Host ""
-                    Write-Host "  Metadata fetched for $($npmSearchResults.Count) packages" -ForegroundColor Green
-                    Write-Host ""
+                    # Install selected packages
+                    if ($allSelections.Count -gt 0) {
+                        Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+                        Write-Host "║  INSTALLING NPM PACKAGES                   ║" -ForegroundColor Cyan
+                        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-                    # Filter out installed packages for selection
-                    $availableForInstall = $npmSearchResults | Where-Object { -not $_.Installed }
+                        Write-Host "Installing $($allSelections.Count) package(s)...`n" -ForegroundColor Cyan
 
-                    if ($availableForInstall.Count -eq 0) {
-                        Write-Host "  All matching packages are already installed!" -ForegroundColor Green
-                    } else {
-                        Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
-                        Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
-                        Write-Host ""
+                        foreach ($pkg in $allSelections) {
+                            Write-Host "→ Installing $($pkg.Name) ($($pkg.Version))..." -ForegroundColor Yellow
 
-                        # Show interactive selection
-                        $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT NPM PACKAGES TO INSTALL"
-
-                        if ($selectedPackages -and $selectedPackages.Count -gt 0) {
-                            Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-                            Write-Host "║  INSTALLING NPM PACKAGES                   ║" -ForegroundColor Cyan
-                            Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
-
-                            Write-Host "Installing $($selectedPackages.Count) package(s)...`n" -ForegroundColor Cyan
-
-                            foreach ($pkg in $selectedPackages) {
-                                Write-Host "→ Installing $($pkg.Name) ($($pkg.Version))..." -ForegroundColor Yellow
-
-                                try {
-                                    npm install -g "$($pkg.Name)@$($pkg.Version)" 2>&1 | Out-Null
-                                    Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
-                                } catch {
-                                    Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
-                                }
+                            try {
+                                npm install -g "$($pkg.Name)@$($pkg.Version)" 2>&1 | Out-Null
+                                Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
+                            } catch {
+                                Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
                             }
-
-                            Write-Host "`n✅ Installation complete!" -ForegroundColor Green
-                        } elseif ($selectedPackages -eq $null) {
-                            Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
-                        } else {
-                            Write-Host "`nNo packages selected." -ForegroundColor Yellow
                         }
+
+                        Write-Host "`n✅ Installation complete!" -ForegroundColor Green
+                    } elseif (-not $result.Cancelled) {
+                        Write-Host "`nNo packages selected." -ForegroundColor Yellow
                     }
                 }
             }

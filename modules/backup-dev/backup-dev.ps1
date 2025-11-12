@@ -255,6 +255,7 @@ if (Test-Path $countLog) {
         # We want Copied + EXTRAS as these are the operations that will occur in Pass 2
         if ($logContent -match '(?m)^\s+Dirs\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Dirs: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $script:totalDirsInSource = [int]$matches[1]
             $dirsCopied = [int]$matches[2]
             $dirsExtras = [int]$matches[6]
             $script:totalDirs = $dirsCopied + $dirsExtras
@@ -262,6 +263,7 @@ if (Test-Path $countLog) {
 
         if ($logContent -match '(?m)^\s+Files\s*:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)') {
             # Files: Total=1, Copied=2, Skipped=3, Mismatch=4, FAIL=5, EXTRAS=6
+            $script:totalFilesInSource = [int]$matches[1]
             $filesCopied = [int]$matches[2]
             $filesExtras = [int]$matches[6]
             $script:totalFiles = $filesCopied + $filesExtras
@@ -279,21 +281,35 @@ if ($testMode -and $countLimitReached) {
 
 # If count-only mode, display summary and exit
 if ($countOnly) {
-    $totalItems = $script:totalDirs + $script:totalFiles
+    $changedItems = $script:totalDirs + $script:totalFiles
+    $inventoryItems = $script:totalDirsInSource + $script:totalFilesInSource
     $scriptEndTime = Get-Date
     $totalRuntime = $scriptEndTime - $scriptStartTime
     $runtimeFormatted = "{0:mm\:ss}" -f $totalRuntime
 
     Write-Host ""
     Write-Separator
-    Write-Host "  Total Directories: " -NoNewline -ForegroundColor Cyan
-    Write-Host "$script:totalDirs" -ForegroundColor White
-    Write-Host "  Total Files:       " -NoNewline -ForegroundColor Cyan
-    Write-Host "$script:totalFiles" -ForegroundColor White
-    Write-Host "  Total Items:       " -NoNewline -ForegroundColor Cyan
-    Write-Host "$totalItems" -ForegroundColor White
-    Write-Host "  Total Runtime:     " -NoNewline -ForegroundColor Cyan
-    Write-Host "$runtimeFormatted" -ForegroundColor White
+    Write-Host "  COUNT SUMMARY" -ForegroundColor Cyan
+    Write-Separator
+    Write-Host ""
+    Write-Host "                        Inventory       Need to Copy" -ForegroundColor Gray
+    Write-Host "                        ---------       ------------" -ForegroundColor DarkGray
+    Write-Host "  Directories:          " -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,9}" -f $script:totalDirsInSource) -NoNewline -ForegroundColor White
+    Write-Host "           " -NoNewline
+    Write-Host ("{0,9}" -f $script:totalDirs) -ForegroundColor Yellow
+    Write-Host "  Files:                " -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,9}" -f $script:totalFilesInSource) -NoNewline -ForegroundColor White
+    Write-Host "           " -NoNewline
+    Write-Host ("{0,9}" -f $script:totalFiles) -ForegroundColor Yellow
+    Write-Host "  " -NoNewline
+    Write-Host ("─" * 46) -ForegroundColor DarkGray
+    Write-Host "  Total:                " -NoNewline -ForegroundColor Cyan
+    Write-Host ("{0,9}" -f $inventoryItems) -NoNewline -ForegroundColor White
+    Write-Host "           " -NoNewline
+    Write-Host ("{0,9}" -f $changedItems) -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Runtime: $runtimeFormatted" -ForegroundColor Gray
     Write-Separator
     exit 0
 }

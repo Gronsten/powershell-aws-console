@@ -2495,14 +2495,14 @@ function Start-CodeCount {
     if (-not $pythonCmd) {
         Write-Host "`nPython not found in PATH. Please ensure Python is installed." -ForegroundColor Red
         pause
-        return
+        return  # This is a hard error, exit to main menu
     }
 
     # Check if count-lines.py exists
     if (-not (Test-Path $countScriptPath)) {
         Write-Host "`ncount-lines.py not found at: $countScriptPath" -ForegroundColor Red
         pause
-        return
+        return  # This is a hard error, exit to main menu
     }
 
     # Initialize navigation state
@@ -2677,8 +2677,7 @@ function Start-CodeCount {
                 }
                 'Q' {
                     Write-Host "`nCancelled." -ForegroundColor Yellow
-                    pause
-                    return
+                    return  # User cancelled, exit to main menu
                 }
             }
         }
@@ -2703,7 +2702,12 @@ function Start-CodeCount {
 
     if ($selectedItems.Count -eq 0 -and -not $countAll) {
         Write-Host "`nNo items selected." -ForegroundColor Yellow
-        pause
+        Write-Host ""
+        Write-Host "Try again? (Y/N): " -ForegroundColor Yellow -NoNewline
+        $response = Read-Host
+        if ($response -match '^[Yy]') {
+            Start-CodeCount
+        }
         return
     }
 
@@ -2715,9 +2719,9 @@ function Start-CodeCount {
     # Count all projects if selected
     if ($countAll) {
         Write-Host "Counting: All Projects" -ForegroundColor Yellow
-        Write-Host "Executing: python $countScriptPath" -ForegroundColor Gray
+        Write-Host "Executing: python $countScriptPath `"$devRoot`"" -ForegroundColor Gray
         Write-Host ""
-        python $countScriptPath
+        python $countScriptPath "$devRoot"
         Write-Host ""
     }
 
@@ -2731,7 +2735,12 @@ function Start-CodeCount {
         Write-Host ""
     }
 
-    pause
+    Write-Host ""
+    Write-Host "Count another project? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -match '^[Yy]') {
+        Start-CodeCount
+    }
 }
 
 # Helper function to get backup script path

@@ -205,7 +205,7 @@ $robocopyMode = if ($countOnly) { "/E" } else { "/MIR" }
 
 $countJob = Start-Job -ScriptBlock {
     param($src, $dst, $log, $mode)
-    robocopy $src $dst /L $mode /R:0 /W:0 /LOG:$log /NP /NDL 2>&1
+    robocopy $src $dst /L $mode /R:0 /W:0 /LOG:$log /NP /NDL /XJ 2>&1
 } -ArgumentList $source, $destination, $countLog, $robocopyMode
 
 $countStartTime = Get-Date
@@ -345,7 +345,8 @@ $robocopyJob = Start-Job -ScriptBlock {
     param($src, $dst, $log, $testMode, $listOnly)
 
     # Build robocopy command with appropriate flags
-    $robocopyFlags = "/MIR /R:3 /W:5 /LOG+:$log /NP /NDL /ETA"
+    # /XJ excludes junction points (important for Scoop directories)
+    $robocopyFlags = "/MIR /R:3 /W:5 /LOG+:$log /NP /NDL /ETA /XJ"
     if ($listOnly) {
         $robocopyFlags = "/L $robocopyFlags"  # Add list-only flag
     }

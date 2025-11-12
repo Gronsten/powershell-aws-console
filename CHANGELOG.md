@@ -58,13 +58,29 @@ Added powerful multi-select capability to package search functionality, allowing
 
 **Example Workflow:**
 ```powershell
-1. Search for packages: Enter search term → Select "Globally available"
-2. View results for all package managers
-3. Get prompted: "Would you like to install any of these packages?"
-4. Select packages using checkbox UI (↑↓ arrows, Space to select)
-5. Confirm with Enter
-6. Watch packages install with progress feedback
+# npm workflow (with batched metadata fetching)
+1. Search: Enter "webpack" → Select "Globally available"
+2. Fetching: "Found 50 packages, fetching metadata..."
+3. Batched loading: "Fetching batch 1 of 3..." (shows progress)
+4. Prompt: "Fetch more? (Y/n)" - user can stop early or fetch all
+5. Summary: "Metadata fetched for 50 packages, 48 available to install"
+6. Checkbox UI appears immediately with all fetched packages
+7. Navigate, select multiple packages (Space/A/N), press Enter
+8. Installation runs with progress for each package
+
+# Scoop/PyPI workflow (instant results)
+1. Search: Enter search term → Select "Globally available"
+2. Results: "Found 15 packages, 12 available to install"
+3. Checkbox UI appears immediately
+4. Select packages and press Enter to install
 ```
+
+**Key Improvements:**
+- ✨ **No extra prompts** - checkbox selection happens automatically
+- ⚡ **Faster workflow** - goes straight to selection after fetching
+- 📊 **Better visibility** - see all results before deciding
+- 🎯 **npm optimization** - batched fetching with progress, user can stop early
+- 🚀 **Scoop/PyPI optimization** - instant selection (no batching needed)
 
 ### v1.4.0 (2025-11-12)
 

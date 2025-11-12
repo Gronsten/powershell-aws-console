@@ -1356,40 +1356,19 @@ function Search-Packages {
             if ($scoopResults -match "No matches found" -or [string]::IsNullOrWhiteSpace($scoopResults)) {
                 Write-Host "  No matches found" -ForegroundColor Gray
             } else {
-                # Parse and sort scoop search output
+                # Parse scoop search output
                 $scoopLines = $scoopResults -split "`n"
-                $headerLines = @()
-                $dataLines = @()
+                $scoopSearchResults = @()
 
                 foreach ($line in $scoopLines) {
-                    # Detect header lines (bucket names, section headers, column headers, separator lines)
+                    # Skip header lines
                     if ($line -match "^'.*'.*bucket" -or
                         $line -match "^Results from" -or
                         $line -match "^Name\s+Version\s+Source" -or
                         $line -match "^\*Name\s+Version\s+Source" -or
-                        $line -match "^-+\s+-+\s+-+") {
-                        $headerLines += $line
-                    } elseif ($line.Trim().Length -gt 0) {
-                        # Only add non-empty lines to data
-                        $dataLines += $line
-                    }
-                }
-
-                # Display headers first
-                $headerLines | ForEach-Object { Write-Host $_ }
-
-                # Collect packages for potential installation
-                $scoopSearchResults = @()
-
-                # Sort and display data with highlighting (already filtered for non-empty)
-                $sortedData = $dataLines | Sort-Object
-                foreach ($line in $sortedData) {
-                    $isInstalled = $false
-                    foreach ($pkg in $installedScoop) {
-                        if ($line -match "^\s*$pkg\s" -or $line -match "/$pkg\s") {
-                            $isInstalled = $true
-                            break
-                        }
+                        $line -match "^-+\s+-+\s+-+" -or
+                        $line.Trim().Length -eq 0) {
+                        continue
                     }
 
                     # Parse package info from line (format: "name version (bucket)")
@@ -1398,58 +1377,68 @@ function Search-Packages {
                         $pkgVersion = $matches[2]
                         $pkgBucket = $matches[3]
 
+                        $isInstalled = $false
+                        foreach ($pkg in $installedScoop) {
+                            if ($pkgName -eq $pkg) {
+                                $isInstalled = $true
+                                break
+                            }
+                        }
+
                         $scoopSearchResults += @{
                             Manager = "Scoop"
                             Name = $pkgName
                             Version = $pkgVersion
                             Bucket = $pkgBucket
                             Installed = $isInstalled
-                            DisplayText = "$pkgName - $pkgVersion ($pkgBucket)"
+                            DisplayText = if ($isInstalled) {
+                                "[ ] $pkgName - $pkgVersion ($pkgBucket) [INSTALLED]"
+                            } else {
+                                "[ ] $pkgName - $pkgVersion ($pkgBucket)"
+                            }
                         }
-                    }
-
-                    if ($isInstalled) {
-                        Write-Host $line -ForegroundColor Green
-                    } else {
-                        Write-Host $line
                     }
                 }
 
-                # Offer to install packages from search results
+                Write-Host "  Found $($scoopSearchResults.Count) package(s)" -ForegroundColor Cyan
+                Write-Host ""
+
+                # Filter out installed packages for selection
                 $availableForInstall = $scoopSearchResults | Where-Object { -not $_.Installed }
 
-                if ($availableForInstall.Count -gt 0) {
+                if ($availableForInstall.Count -eq 0) {
+                    Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                } else {
+                    Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                    Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
                     Write-Host ""
-                    Write-Host "  Would you like to install any of these packages? (Y/n)" -ForegroundColor Yellow
-                    $installResponse = Read-Host "  "
 
-                    if ($installResponse -notmatch '^[Nn]') {
-                        $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PACKAGES TO INSTALL"
+                    # Show interactive selection
+                    $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT SCOOP PACKAGES TO INSTALL"
 
-                        if ($selectedPackages -and $selectedPackages.Count -gt 0) {
-                            Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-                            Write-Host "║  INSTALLING SCOOP PACKAGES                 ║" -ForegroundColor Cyan
-                            Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+                    if ($selectedPackages -and $selectedPackages.Count -gt 0) {
+                        Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+                        Write-Host "║  INSTALLING SCOOP PACKAGES                 ║" -ForegroundColor Cyan
+                        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-                            Write-Host "Installing $($selectedPackages.Count) package(s)...`n" -ForegroundColor Cyan
+                        Write-Host "Installing $($selectedPackages.Count) package(s)...`n" -ForegroundColor Cyan
 
-                            foreach ($pkg in $selectedPackages) {
-                                Write-Host "→ Installing $($pkg.Name) from $($pkg.Bucket)..." -ForegroundColor Yellow
+                        foreach ($pkg in $selectedPackages) {
+                            Write-Host "→ Installing $($pkg.Name) from $($pkg.Bucket)..." -ForegroundColor Yellow
 
-                                try {
-                                    scoop install $pkg.Name
-                                    Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
-                                } catch {
-                                    Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
-                                }
+                            try {
+                                scoop install $pkg.Name
+                                Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
+                            } catch {
+                                Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
                             }
-
-                            Write-Host "`n✅ Installation complete!" -ForegroundColor Green
-                        } elseif ($selectedPackages -eq $null) {
-                            Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
-                        } else {
-                            Write-Host "`nNo packages selected." -ForegroundColor Yellow
                         }
+
+                        Write-Host "`n✅ Installation complete!" -ForegroundColor Green
+                    } elseif ($selectedPackages -eq $null) {
+                        Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
+                    } else {
+                        Write-Host "`nNo packages selected." -ForegroundColor Yellow
                     }
                 }
             }
@@ -1561,12 +1550,13 @@ function Search-Packages {
                 } else {
                     # Show total matches found
                     Write-Host "  Found $($sortedMatches.Count) matching packages" -ForegroundColor Cyan
+                    Write-Host "  Fetching package metadata..." -ForegroundColor Gray
                     Write-Host ""
 
-                    # Collect packages for potential installation
+                    # Collect ALL packages with metadata first (for interactive selection)
                     $npmSearchResults = @()
 
-                    # Display packages in batches of 20
+                    # Fetch metadata in batches for performance
                     $batchSize = 20
                     $startIndex = 0
 
@@ -1579,9 +1569,8 @@ function Search-Packages {
 
                         if ($currentBatch.Count -eq 0) { break }
 
-                        # Print table header
-                        Write-Host "  NAME              VERSION         DESCRIPTION" -ForegroundColor Cyan
-                        Write-Host "  ================  ==============  ========================================" -ForegroundColor DarkGray
+                        # Show progress
+                        Write-Host "  Fetching batch $([Math]::Ceiling(($startIndex + 1) / $batchSize)) of $([Math]::Ceiling($sortedMatches.Count / $batchSize))..." -ForegroundColor Gray
 
                         # Fetch package metadata in parallel using runspaces for better performance
                         $runspacePool = [runspacefactory]::CreateRunspacePool(1, 20)
@@ -1632,7 +1621,7 @@ function Search-Packages {
                         $runspacePool.Close()
                         $runspacePool.Dispose()
 
-                        # Display packages in original order and collect for installation
+                        # Collect package metadata (no display yet)
                         foreach ($pkgName in $currentBatch) {
                             $result = $results[$pkgName]
                             $isInstalled = $installedNpm -contains $pkgName
@@ -1641,10 +1630,8 @@ function Search-Packages {
                                 $version = $result.version
                                 $description = if ($result.description) { $result.description } else { "" }
 
-                                # Truncate description to fit in table (60 chars max)
-                                if ($description.Length -gt 60) {
-                                    $description = $description.Substring(0, 57) + "..."
-                                }
+                                # Truncate description for display
+                                $descriptionShort = if ($description.Length -gt 40) { $description.Substring(0, 37) + "..." } else { $description }
 
                                 # Add to results collection
                                 $npmSearchResults += @{
@@ -1653,38 +1640,23 @@ function Search-Packages {
                                     Version = $version
                                     Description = $description
                                     Installed = $isInstalled
-                                    DisplayText = "$pkgName - $version - $description"
+                                    DisplayText = if ($isInstalled) {
+                                        "[ ] $pkgName - $version - $descriptionShort [INSTALLED]"
+                                    } else {
+                                        "[ ] $pkgName - $version - $descriptionShort"
+                                    }
                                 }
-
-                                # Format name with [I] indicator if installed
-                                $nameDisplay = if ($isInstalled) { "$pkgName [I]" } else { $pkgName }
-
-                                # Pad columns for alignment (NAME: 16, VERSION: 14, DESC: 60)
-                                $namePadded = $nameDisplay.PadRight(16)
-                                $versionPadded = $version.PadRight(14)
-
-                                # Color installed packages green
-                                if ($isInstalled) {
-                                    Write-Host "  $namePadded  $versionPadded  $description" -ForegroundColor Green
-                                } else {
-                                    Write-Host "  $namePadded  $versionPadded  $description"
-                                }
-                            } else {
-                                # Failed to fetch metadata
-                                $namePadded = $pkgName.PadRight(16)
-                                Write-Host "  $namePadded  (error)         Unable to fetch package details" -ForegroundColor DarkGray
                             }
                         }
-                        Write-Host ""
 
                         $startIndex += $currentBatch.Count
 
-                        # Prompt to show more if there are remaining packages
+                        # Ask if user wants to fetch more results
                         if ($startIndex -lt $sortedMatches.Count) {
                             $remaining = $sortedMatches.Count - $startIndex
                             Write-Host ""
-                            Write-Host "  Showing $startIndex of $($sortedMatches.Count) matches. $remaining more available." -ForegroundColor Yellow
-                            $response = Read-Host "  Show more? (Y/n)"
+                            Write-Host "  Fetched $startIndex of $($sortedMatches.Count) packages. $remaining more available." -ForegroundColor Yellow
+                            $response = Read-Host "  Fetch more? (Y/n)"
                             if ($response -match '^[Nn]') {
                                 break
                             }
@@ -1692,41 +1664,46 @@ function Search-Packages {
                         }
                     }
 
-                    # Offer to install packages from search results
+                    Write-Host ""
+                    Write-Host "  Metadata fetched for $($npmSearchResults.Count) packages" -ForegroundColor Green
+                    Write-Host ""
+
+                    # Filter out installed packages for selection
                     $availableForInstall = $npmSearchResults | Where-Object { -not $_.Installed }
 
-                    if ($availableForInstall.Count -gt 0) {
+                    if ($availableForInstall.Count -eq 0) {
+                        Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                    } else {
+                        Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                        Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
                         Write-Host ""
-                        Write-Host "  Would you like to install any of these packages? (Y/n)" -ForegroundColor Yellow
-                        $installResponse = Read-Host "  "
 
-                        if ($installResponse -notmatch '^[Nn]') {
-                            $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PACKAGES TO INSTALL"
+                        # Show interactive selection
+                        $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT NPM PACKAGES TO INSTALL"
 
-                            if ($selectedPackages -and $selectedPackages.Count -gt 0) {
-                                Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-                                Write-Host "║  INSTALLING NPM PACKAGES                   ║" -ForegroundColor Cyan
-                                Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+                        if ($selectedPackages -and $selectedPackages.Count -gt 0) {
+                            Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+                            Write-Host "║  INSTALLING NPM PACKAGES                   ║" -ForegroundColor Cyan
+                            Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-                                Write-Host "Installing $($selectedPackages.Count) package(s)...`n" -ForegroundColor Cyan
+                            Write-Host "Installing $($selectedPackages.Count) package(s)...`n" -ForegroundColor Cyan
 
-                                foreach ($pkg in $selectedPackages) {
-                                    Write-Host "→ Installing $($pkg.Name) ($($pkg.Version))..." -ForegroundColor Yellow
+                            foreach ($pkg in $selectedPackages) {
+                                Write-Host "→ Installing $($pkg.Name) ($($pkg.Version))..." -ForegroundColor Yellow
 
-                                    try {
-                                        npm install -g "$($pkg.Name)@$($pkg.Version)" 2>&1 | Out-Null
-                                        Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
-                                    } catch {
-                                        Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
-                                    }
+                                try {
+                                    npm install -g "$($pkg.Name)@$($pkg.Version)" 2>&1 | Out-Null
+                                    Write-Host "  ✅ $($pkg.Name) installed successfully" -ForegroundColor Green
+                                } catch {
+                                    Write-Host "  ❌ Error installing $($pkg.Name): $_" -ForegroundColor Red
                                 }
-
-                                Write-Host "`n✅ Installation complete!" -ForegroundColor Green
-                            } elseif ($selectedPackages -eq $null) {
-                                Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
-                            } else {
-                                Write-Host "`nNo packages selected." -ForegroundColor Yellow
                             }
+
+                            Write-Host "`n✅ Installation complete!" -ForegroundColor Green
+                        } elseif ($selectedPackages -eq $null) {
+                            Write-Host "`nInstallation cancelled." -ForegroundColor Yellow
+                        } else {
+                            Write-Host "`nNo packages selected." -ForegroundColor Yellow
                         }
                     }
                 }
@@ -1953,15 +1930,21 @@ function Search-Packages {
                     }
 
                     # Offer to install packages from search results
-                    $availableForInstall = $pipSearchResults | Where-Object { -not $_.Installed }
+                    if ($pipSearchResults.Count -eq 0) {
+                        Write-Host "  No packages found to install" -ForegroundColor Gray
+                    } else {
+                        $availableForInstall = $pipSearchResults | Where-Object { -not $_.Installed }
 
-                    if ($availableForInstall.Count -gt 0) {
-                        Write-Host ""
-                        Write-Host "  Would you like to install any of these packages? (Y/n)" -ForegroundColor Yellow
-                        $installResponse = Read-Host "  "
+                        if ($availableForInstall.Count -eq 0) {
+                            Write-Host "  All matching packages are already installed!" -ForegroundColor Green
+                        } else {
+                            Write-Host ""
+                            Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                            Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
+                            Write-Host ""
 
-                        if ($installResponse -notmatch '^[Nn]') {
-                            $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PACKAGES TO INSTALL"
+                            # Show interactive selection
+                            $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PIP PACKAGES TO INSTALL"
 
                             if ($selectedPackages -and $selectedPackages.Count -gt 0) {
                                 Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan

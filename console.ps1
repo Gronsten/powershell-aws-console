@@ -2719,16 +2719,38 @@ function Start-CodeCount {
         Write-Host ""
         python $countScriptPath "$devRoot"
         Write-Host ""
+
+        # If there are also individual items selected, pause before showing them
+        if ($selectedItems.Count -gt 0) {
+            Write-Host "Press Enter to view individual project counts..." -ForegroundColor Gray
+            Read-Host
+        }
     }
 
-    # Count each selected item
+    # Count each selected item with pagination
+    $itemCount = $selectedItems.Count
+    $currentItem = 0
     foreach ($itemPath in $selectedItems) {
+        $currentItem++
         $relativePath = $itemPath.Replace($devRoot + "\", "")
+
+        Clear-Host
+        Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+        Write-Host "║  CODE LINE COUNTER - RESULTS               ║" -ForegroundColor Cyan
+        Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+        Write-Host "Project $currentItem of $itemCount`n" -ForegroundColor Gray
+
         Write-Host "Counting: $relativePath" -ForegroundColor Yellow
         Write-Host "Executing: python $countScriptPath `"$itemPath`"" -ForegroundColor Gray
         Write-Host ""
         python $countScriptPath "$itemPath"
         Write-Host ""
+
+        # Pause between items (but not after the last one)
+        if ($currentItem -lt $itemCount) {
+            Write-Host "Press Enter to continue to next project..." -ForegroundColor Gray
+            Read-Host
+        }
     }
 
     pause

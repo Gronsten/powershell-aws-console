@@ -20,6 +20,52 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.5.0 (2025-11-12)
+
+**Package Manager Enhancement: Multi-Select Installation from Search Results**
+
+Added powerful multi-select capability to package search functionality, allowing users to select and install multiple packages directly from global search results.
+
+**New Features:**
+- **Multi-Select Installation**: After searching for packages globally, users can now:
+  - Select multiple packages using checkbox UI (Space to toggle, Enter to confirm)
+  - Select all packages with 'A' key
+  - Deselect all with 'N' key
+  - Cancel with 'Q' key
+  - Review selection summary before installation
+  - Install all selected packages in batch
+
+- **Supported Package Managers**:
+  - ✅ **npm** - Search npm registry (3.6M+ packages) and install selected packages
+  - ✅ **Scoop** - Search Scoop buckets and install selected packages
+  - ✅ **PyPI** - Search PyPI (exact match + variations) and install selected packages
+
+- **Smart Filtering**: Only non-installed packages are offered for selection
+  - Installed packages are highlighted in green during search
+  - Installation prompt only appears if uninstalled packages were found
+
+**User Experience:**
+- Reuses existing checkbox selection pattern from package updates
+- Consistent UI across all package managers
+- Clear visual feedback during installation
+- Success/error reporting for each package
+
+**Benefits:**
+- Save time installing multiple packages from search results
+- No need to re-run searches to install packages one by one
+- Reduces manual typing of package names
+- Consistent experience across npm, Scoop, and PyPI
+
+**Example Workflow:**
+```powershell
+1. Search for packages: Enter search term → Select "Globally available"
+2. View results for all package managers
+3. Get prompted: "Would you like to install any of these packages?"
+4. Select packages using checkbox UI (↑↓ arrows, Space to select)
+5. Confirm with Enter
+6. Watch packages install with progress feedback
+```
+
 ### v1.4.0 (2025-11-12)
 
 **Project Structure Improvements**

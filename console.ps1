@@ -1,3 +1,60 @@
+# Handle command-line parameters
+param(
+    [switch]$Version,
+    [switch]$v,
+    [switch]$Help,
+    [switch]$h
+)
+
+# Version constant
+$script:ConsoleVersion = "1.6.0"
+
+# Handle double-dash arguments (--version, --help) by checking $MyInvocation
+if ($MyInvocation.Line -match '--version') {
+    Write-Host "powershell-console version $script:ConsoleVersion" -ForegroundColor Cyan
+    exit 0
+}
+
+if ($MyInvocation.Line -match '--help') {
+    Write-Host ""
+    Write-Host "PowerShell Console" -ForegroundColor Cyan
+    Write-Host "==================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Usage:" -ForegroundColor Yellow
+    Write-Host "  .\console.ps1                Run the interactive console menu"
+    Write-Host "  .\console.ps1 --version      Display version information"
+    Write-Host "  .\console.ps1 --help         Display this help message"
+    Write-Host ""
+    Write-Host "Options:" -ForegroundColor Yellow
+    Write-Host "  --version, -Version, -v      Show version number"
+    Write-Host "  --help, -Help, -h            Show this help message"
+    Write-Host ""
+    exit 0
+}
+
+# Handle -Version or -v flag
+if ($Version -or $v) {
+    Write-Host "powershell-console version $script:ConsoleVersion" -ForegroundColor Cyan
+    exit 0
+}
+
+# Handle -Help or -h flag
+if ($Help -or $h) {
+    Write-Host ""
+    Write-Host "PowerShell Console" -ForegroundColor Cyan
+    Write-Host "==================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Usage:" -ForegroundColor Yellow
+    Write-Host "  .\console.ps1                Run the interactive console menu"
+    Write-Host "  .\console.ps1 --version      Display version information"
+    Write-Host "  .\console.ps1 --help         Display this help message"
+    Write-Host ""
+    Write-Host "Options:" -ForegroundColor Yellow
+    Write-Host "  --version, -Version, -v      Show version number"
+    Write-Host "  --help, -Help, -h            Show this help message"
+    Write-Host ""
+    exit 0
+}
 
 # ==========================================
 # CONSOLE INITIALIZATION
@@ -1175,6 +1232,7 @@ function Show-CheckboxSelection {
     # Draw initial list once (let console scroll naturally)
     for ($i = 0; $i -lt $Items.Count; $i++) {
         $item = $Items[$i]
+        $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
         $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
 
         # Truncate to console width
@@ -1184,7 +1242,11 @@ function Show-CheckboxSelection {
         }
 
         $line = "  [ ] $displayText"
-        Write-Host $line
+        if ($isInstalled) {
+            Write-Host $line -ForegroundColor DarkGray
+        } else {
+            Write-Host $line
+        }
     }
 
     # After drawing, recalculate startLine (window may have scrolled)
@@ -1202,6 +1264,7 @@ function Show-CheckboxSelection {
             }
 
             $item = $Items[$i]
+            $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
             $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
             $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
 
@@ -1218,8 +1281,10 @@ function Show-CheckboxSelection {
             $lineWidth = [Math]::Min($line.Length + 5, [Console]::WindowWidth - 1)
             $line = $line.PadRight($lineWidth)
 
-            # Write with color based on current selection
-            if ($i -eq $currentIndex) {
+            # Write with color based on current selection and installed status
+            if ($isInstalled) {
+                [Console]::ForegroundColor = [ConsoleColor]::DarkGray
+            } elseif ($i -eq $currentIndex) {
                 [Console]::ForegroundColor = [ConsoleColor]::Green
             } else {
                 [Console]::ForegroundColor = [ConsoleColor]::White
@@ -1238,11 +1303,21 @@ function Show-CheckboxSelection {
                 $currentIndex = ($currentIndex + 1) % $Items.Count
             }
             'Spacebar' {
-                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+                # Only allow selection of non-installed packages
+                $item = $Items[$currentIndex]
+                $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
+                if (-not $isInstalled) {
+                    $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+                }
             }
             'A' {
+                # Select all non-installed packages only
                 for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
-                    $selectedIndexes[$i] = $true
+                    $item = $Items[$i]
+                    $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
+                    if (-not $isInstalled) {
+                        $selectedIndexes[$i] = $true
+                    }
                 }
             }
             'N' {
@@ -1334,6 +1409,7 @@ function Show-InlineBatchSelection {
     # Draw initial list once (let console scroll naturally)
     for ($i = 0; $i -lt $CurrentBatch.Count; $i++) {
         $item = $CurrentBatch[$i]
+        $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
         $displayText = if ($item.DisplayText) { $item.DisplayText } else { $item.ToString() }
 
         # Truncate to console width
@@ -1343,7 +1419,11 @@ function Show-InlineBatchSelection {
         }
 
         $line = "  [ ] $displayText"
-        Write-Host $line
+        if ($isInstalled) {
+            Write-Host $line -ForegroundColor DarkGray
+        } else {
+            Write-Host $line
+        }
     }
 
     # After drawing, recalculate startLine (window may have scrolled)
@@ -1361,6 +1441,7 @@ function Show-InlineBatchSelection {
             }
 
             $item = $CurrentBatch[$i]
+            $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
             $checkbox = if ($selectedIndexes[$i]) { "[X]" } else { "[ ]" }
             $arrow = if ($i -eq $currentIndex) { ">" } else { " " }
 
@@ -1379,8 +1460,10 @@ function Show-InlineBatchSelection {
             $lineWidth = [Math]::Min($line.Length + 5, [Console]::WindowWidth - 1)
             $line = $line.PadRight($lineWidth)
 
-            # Write with color based on current selection
-            if ($i -eq $currentIndex) {
+            # Write with color based on current selection and installed status
+            if ($isInstalled) {
+                [Console]::ForegroundColor = [ConsoleColor]::DarkGray
+            } elseif ($i -eq $currentIndex) {
                 [Console]::ForegroundColor = [ConsoleColor]::Green
             } else {
                 [Console]::ForegroundColor = [ConsoleColor]::White
@@ -1399,11 +1482,21 @@ function Show-InlineBatchSelection {
                 $currentIndex = ($currentIndex + 1) % $CurrentBatch.Count
             }
             'Spacebar' {
-                $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+                # Only allow selection of non-installed packages
+                $item = $CurrentBatch[$currentIndex]
+                $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
+                if (-not $isInstalled) {
+                    $selectedIndexes[$currentIndex] = -not $selectedIndexes[$currentIndex]
+                }
             }
             'A' {
+                # Select all non-installed packages only
                 for ($i = 0; $i -lt $selectedIndexes.Count; $i++) {
-                    $selectedIndexes[$i] = $true
+                    $item = $CurrentBatch[$i]
+                    $isInstalled = if ($item -is [hashtable] -and $item.ContainsKey('Installed')) { $item.Installed } else { $false }
+                    if (-not $isInstalled) {
+                        $selectedIndexes[$i] = $true
+                    }
                 }
             }
             'N' {
@@ -1646,18 +1739,22 @@ function Search-Packages {
                 Write-Host "  Found $($scoopSearchResults.Count) package(s)" -ForegroundColor Cyan
                 Write-Host ""
 
-                # Filter out installed packages for selection
-                $availableForInstall = $scoopSearchResults | Where-Object { -not $_.Installed }
+                # Count packages available for installation (non-installed)
+                $availableCount = ($scoopSearchResults | Where-Object { -not $_.Installed }).Count
+                $installedCount = ($scoopSearchResults | Where-Object { $_.Installed }).Count
 
-                if ($availableForInstall.Count -eq 0) {
+                if ($installedCount -gt 0) {
+                    Write-Host "  $installedCount package(s) already installed (shown in gray)" -ForegroundColor Gray
+                }
+                if ($availableCount -eq 0) {
                     Write-Host "  All matching packages are already installed!" -ForegroundColor Green
                 } else {
-                    Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                    Write-Host "  $availableCount package(s) available to install" -ForegroundColor Cyan
                     Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
                     Write-Host ""
 
-                    # Show interactive selection
-                    $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT SCOOP PACKAGES TO INSTALL"
+                    # Show interactive selection (includes all packages, but installed ones are unselectable)
+                    $selectedPackages = Show-CheckboxSelection -Items $scoopSearchResults -Title "SELECT SCOOP PACKAGES TO INSTALL"
 
                     if ($selectedPackages -and $selectedPackages.Count -gt 0) {
                         # Ensure each package has Manager property for unified installation
@@ -1861,7 +1958,7 @@ function Search-Packages {
                             $result = $results[$pkgName]
                             $isInstalled = $installedNpm -contains $pkgName
 
-                            if ($result -and $result.success -and -not $isInstalled) {
+                            if ($result -and $result.success) {
                                 $version = $result.version
                                 $description = if ($result.description) { $result.description } else { "" }
 
@@ -1873,7 +1970,12 @@ function Search-Packages {
                                     Name = $pkgName
                                     Version = $version
                                     Description = $description
-                                    DisplayText = "$pkgName - $version - $descriptionShort"
+                                    Installed = $isInstalled
+                                    DisplayText = if ($isInstalled) {
+                                        "$pkgName - $version - $descriptionShort [INSTALLED]"
+                                    } else {
+                                        "$pkgName - $version - $descriptionShort"
+                                    }
                                 }
                             }
                         }
@@ -2025,7 +2127,11 @@ function Search-Packages {
                                     Version = $pkgInfo.version
                                     Summary = $pkgInfo.summary
                                     Installed = $isInstalled
-                                    DisplayText = "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                    DisplayText = if ($isInstalled) {
+                                        "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary) [INSTALLED]"
+                                    } else {
+                                        "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                    }
                                 }
 
                                 Write-Host "  Package: $($pkgInfo.name)$installStatus" -ForegroundColor $color
@@ -2057,7 +2163,11 @@ function Search-Packages {
                                             Version = $pkgInfo.version
                                             Summary = $pkgInfo.summary
                                             Installed = $isInstalled
-                                            DisplayText = "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                            DisplayText = if ($isInstalled) {
+                                                "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary) [INSTALLED]"
+                                            } else {
+                                                "$($pkgInfo.name) - $($pkgInfo.version) - $($pkgInfo.summary)"
+                                            }
                                         }
 
                                         Write-Host "  Found similar package:" -ForegroundColor Cyan
@@ -2140,18 +2250,23 @@ function Search-Packages {
                     if ($pipSearchResults.Count -eq 0) {
                         Write-Host "  No packages found to install" -ForegroundColor Gray
                     } else {
-                        $availableForInstall = $pipSearchResults | Where-Object { -not $_.Installed }
+                        # Count packages available for installation (non-installed)
+                        $availableCount = ($pipSearchResults | Where-Object { -not $_.Installed }).Count
+                        $installedCount = ($pipSearchResults | Where-Object { $_.Installed }).Count
 
-                        if ($availableForInstall.Count -eq 0) {
+                        if ($installedCount -gt 0) {
+                            Write-Host "  $installedCount package(s) already installed (shown in gray in selection menu)" -ForegroundColor Gray
+                        }
+                        if ($availableCount -eq 0) {
                             Write-Host "  All matching packages are already installed!" -ForegroundColor Green
                         } else {
                             Write-Host ""
-                            Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                            Write-Host "  $availableCount package(s) available to install" -ForegroundColor Cyan
                             Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
                             Write-Host ""
 
-                            # Show interactive selection
-                            $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT PIP PACKAGES TO INSTALL"
+                            # Show interactive selection (includes all packages, but installed ones are unselectable)
+                            $selectedPackages = Show-CheckboxSelection -Items $pipSearchResults -Title "SELECT PIP PACKAGES TO INSTALL"
 
                             if ($selectedPackages -and $selectedPackages.Count -gt 0) {
                                 # Ensure each package has Manager property for unified installation
@@ -2255,7 +2370,11 @@ function Search-Packages {
                         DisplayName = $packageName
                         Version = $packageVersion
                         Installed = $isInstalled
-                        DisplayText = "$packageName - $packageId ($packageVersion)"
+                        DisplayText = if ($isInstalled) {
+                            "$packageName - $packageId ($packageVersion) [INSTALLED]"
+                        } else {
+                            "$packageName - $packageId ($packageVersion)"
+                        }
                     }
                 }
             }
@@ -2297,18 +2416,23 @@ function Search-Packages {
                 if ($wingetSearchResults.Count -eq 0) {
                     Write-Host "  No packages found to install" -ForegroundColor Gray
                 } else {
-                    $availableForInstall = $wingetSearchResults | Where-Object { -not $_.Installed }
+                    # Count packages available for installation (non-installed)
+                    $availableCount = ($wingetSearchResults | Where-Object { -not $_.Installed }).Count
+                    $installedCount = ($wingetSearchResults | Where-Object { $_.Installed }).Count
 
-                    if ($availableForInstall.Count -eq 0) {
+                    if ($installedCount -gt 0) {
+                        Write-Host "  $installedCount package(s) already installed (shown in gray in selection menu)" -ForegroundColor Gray
+                    }
+                    if ($availableCount -eq 0) {
                         Write-Host "  All matching packages are already installed!" -ForegroundColor Green
                     } else {
                         Write-Host ""
-                        Write-Host "  $($availableForInstall.Count) package(s) available to install" -ForegroundColor Cyan
+                        Write-Host "  $availableCount package(s) available to install" -ForegroundColor Cyan
                         Write-Host "  Select packages to install using the interactive menu..." -ForegroundColor Gray
                         Write-Host ""
 
-                        # Show interactive selection
-                        $selectedPackages = Show-CheckboxSelection -Items $availableForInstall -Title "SELECT WINGET PACKAGES TO INSTALL"
+                        # Show interactive selection (includes all packages, but installed ones are unselectable)
+                        $selectedPackages = Show-CheckboxSelection -Items $wingetSearchResults -Title "SELECT WINGET PACKAGES TO INSTALL"
 
                         if ($selectedPackages -and $selectedPackages.Count -gt 0) {
                             # Ensure each package has Manager property for unified installation

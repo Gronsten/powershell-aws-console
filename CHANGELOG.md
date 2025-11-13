@@ -20,6 +20,36 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.6.0 (2025-11-13)
+
+**Package Manager Enhancement: Installed Package Visibility & Version Support**
+
+Improved package search functionality to display already-installed packages and added command-line version support.
+
+**New Features:**
+- **Version Support**: Added command-line flags to display version information
+  - `--version` - Display version number (double-dash)
+  - `-Version` - Display version number (single-dash)
+  - `-v` - Display version number (shorthand)
+  - `--help` - Display help message (double-dash)
+  - `-Help` - Display help message (single-dash)
+  - `-h` - Display help message (shorthand)
+
+**Bug Fixes:**
+- **Installed Package Visibility**: Fixed package search to show already-installed packages
+  - Installed packages now displayed in search results (shown in gray)
+  - Installed packages marked with `[INSTALLED]` suffix
+  - Installed packages are unselectable (cannot be selected with spacebar)
+  - "Select All" (A key) only selects available (non-installed) packages
+  - Clear messaging about installed vs. available package counts
+  - Applies to all package managers: Scoop, npm, pip, winget
+
+**Technical Improvements:**
+- Updated `Show-CheckboxSelection` function to support disabled items
+- Updated `Show-InlineBatchSelection` function to support disabled items
+- Enhanced package result objects to include `Installed` property
+- Improved user feedback with installed package counts
+
 ### v1.5.0 (2025-11-12)
 
 **Package Manager Enhancement: Multi-Select Installation with Unified Installation Phase**

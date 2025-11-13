@@ -3,6 +3,7 @@
 
 import os
 import sys
+import json
 from pathlib import Path
 from collections import defaultdict
 import time
@@ -161,11 +162,18 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     print("="*70)
 
 if __name__ == '__main__':
-    # Dev root for exclusion rules - auto-detect from script location
-    # Script is in powershell-console/scripts/, so dev root is two levels up
+    # Load dev root from config.json
     script_dir = Path(__file__).resolve().parent
-    # Go up two levels: scripts/ -> powershell-console/ -> dev/
-    dev_root = script_dir.parent.parent
+    config_path = script_dir.parent / 'config.json'
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        dev_root = Path(config['paths']['devRoot'])
+    except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
+        print(f"Error: Could not read devRoot from config.json: {e}")
+        print(f"Expected config at: {config_path}")
+        sys.exit(1)
 
     # Parse command line arguments
     if len(sys.argv) > 1:

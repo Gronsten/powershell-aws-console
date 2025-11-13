@@ -28,8 +28,11 @@ Implemented a dual environment structure to separate active development from pro
 
 **Config Changes Required:**
 - Added `configVersion` (string) - Tracks config schema version for smart upgrade merging
-  - Set to "1.6.0" for current release
+  - Set to "1.7.0" for this release
   - Will be automatically managed by upgrade-prod.ps1 script
+- Added `paths.devRoot` (string) - Absolute path to development root directory
+  - Used by count-lines.py for project exclusion rules
+  - Example: `"C:\\AppInstall\\dev"`
 
 **New Features:**
 - **DEV/PROD Separation**: Repository restructured for safe parallel development and production use
@@ -49,6 +52,12 @@ Implemented a dual environment structure to separate active development from pro
 - **Config Versioning**: Added `configVersion` field to config.json schema
   - Enables automatic detection of config schema changes
   - Supports safe upgrades with schema migrations
+
+**Bug Fixes:**
+- **Code Count Fix**: Updated count-lines.py to read `devRoot` from config.json
+  - No longer relies on relative path navigation (parent.parent)
+  - Explicitly configured in config.json paths.devRoot
+  - Works correctly with new _dev directory structure
 
 **Breaking Changes:**
 - **Repository Structure**: Git repository moved to `_dev/` subdirectory

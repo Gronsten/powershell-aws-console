@@ -95,9 +95,17 @@ The best way to use this module is to load it in your PowerShell profile so it's
 
 ```powershell
 # AWS Prompt Indicator - Simple two-line integration
-Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
-Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json" | Out-Null
+# Adjust paths to where you installed powershell-console
+Import-Module "C:\path\to\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
+Enable-AwsPromptIndicator -ConfigPath "C:\path\to\powershell-console\config.json" -OhMyPoshTheme "C:\path\to\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json" | Out-Null
 ```
+
+**Example paths:**
+- Regular installation: `C:\Tools\powershell-console\modules\...`
+- Cloned from GitHub: `C:\Users\YourName\repos\powershell-console\modules\...`
+- Repository maintainer (dev): `C:\AppInstall\dev\powershell-console\_dev\modules\...`
+
+> **Note:** Replace `C:\path\to\powershell-console` with wherever you installed or cloned the repository.
 
 That's it! The `Enable-AwsPromptIndicator` function handles everything:
 - Initializes the module with your config

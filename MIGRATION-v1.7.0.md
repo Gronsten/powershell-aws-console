@@ -77,41 +77,75 @@ cd C:\AppInstall\dev\powershell-console\_prod
 .\console.ps1
 ```
 
-## New Directory Structure
+## Directory Structure
+
+### What Regular Users See (Cloning from GitHub)
+
+When you clone from GitHub, you get the standard flat structure:
+
+```
+powershell-console/
+├── .git/
+├── console.ps1
+├── config.example.json
+├── modules/
+├── scripts/
+├── resources/
+├── CHANGELOG.md
+├── README.md
+└── ...
+```
+
+**No `_dev` or `_prod` folders!** Those are repository maintainer-specific and **not in GitHub**.
+
+### What Repository Maintainers See (Local Development Setup)
+
+The `_dev/_prod` structure exists **only on the maintainer's local machine**:
 
 ```
 C:\AppInstall\dev\powershell-console\
-├── _dev\                           # Development environment
+├── _dev\                           # Git repo (syncs to GitHub)
 │   ├── .git\                       # Git repository
-│   ├── console.ps1                 # v1.7.0+ DEV version
-│   ├── config.json                 # DEV config (your settings)
+│   ├── console.ps1
 │   ├── modules\, scripts\, resources\
 │   └── ...
-├── _prod\                          # Production environment
-│   ├── console.ps1                 # Stable PROD version
-│   ├── config.json                 # PROD config (your settings)
+├── _prod\                          # Stable releases (local only)
+│   ├── console.ps1
+│   ├── config.json
 │   └── ...
-└── upgrade-prod.ps1                # Upgrade script
+└── upgrade-prod.ps1                # Local only
 ```
+
+**Key point:** The GitHub repository contains **only** what's in `_dev`. Regular users never see the split.
 
 ## Visual Indicators
 
-Starting in v1.7.0, the console shows which environment you're in:
+Starting in v1.7.0, the console detects its environment from the installation path:
 
-**DEV:**
+**Regular Users (cloned from GitHub):**
+```
+[UNKNOWN] PowerShell Console v1.7.0
+Window Title: PowerShell Console [UNKNOWN] v1.7.0
+```
+- Shows `[UNKNOWN]` (Red) because the path doesn't contain `_dev` or `_prod`
+- This is **completely normal** for regular installations
+- All functionality works exactly the same
+
+**Repository Maintainer (_dev folder):**
 ```
 [DEV] PowerShell Console v1.7.0
 Window Title: PowerShell Console [DEV] v1.7.0
 ```
+- Shows `[DEV]` (Yellow) when running from `...\powershell-console\_dev\`
 
-**PROD:**
+**Repository Maintainer (_prod folder):**
 ```
 [PROD] PowerShell Console v1.7.0
 Window Title: PowerShell Console [PROD] v1.7.0
 ```
+- Shows `[PROD]` (Green) when running from `...\powershell-console\_prod\`
 
-- `[DEV]` = Yellow
-- `[PROD]` = Green
+**Summary:** Regular users see `[UNKNOWN]` - this is fine! The DEV/PROD indicators are only for maintainers with the split structure.
 
 ## Upgrading PROD Environment
 

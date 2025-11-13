@@ -7,7 +7,7 @@ param(
 )
 
 # Version constant
-$script:ConsoleVersion = "1.6.0"
+$script:ConsoleVersion = "1.7.0"
 
 # Handle double-dash arguments (--version, --help) by checking $MyInvocation
 if ($MyInvocation.Line -match '--version') {

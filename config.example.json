@@ -194,5 +194,6 @@
       "oktaIntegration": "Works with okta-aws-cli which updates the [default] profile in credentials file",
       "setup": "See modules/aws-prompt-indicator/README.md for complete setup instructions and PowerShell profile integration"
     }
-  }
+  },
+  "configVersion": "1.7.0"
 }

@@ -20,6 +20,45 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.7.0 (2025-11-13)
+
+**DEV/PROD Environment Separation & Smart Config Merge**
+
+Implemented a dual environment structure to separate active development from production usage, with intelligent config management.
+
+**Config Changes Required:**
+- Added `configVersion` (string) - Tracks config schema version for smart upgrade merging
+  - Set to "1.6.0" for current release
+  - Will be automatically managed by upgrade-prod.ps1 script
+
+**New Features:**
+- **DEV/PROD Separation**: Repository restructured for safe parallel development and production use
+  - `_dev/` - Development environment with Git repository
+  - `_prod/` - Production environment for daily use (stable releases only)
+  - Separate config.json files for each environment
+- **Smart Config Merge**: Created `upgrade-prod.ps1` script with intelligent config management
+  - Automatically merges new config fields from releases
+  - Preserves all user values during upgrades
+  - Detects and reports deprecated fields
+  - Tracks schema versions with `configVersion` field
+  - Alerts to CHANGELOG for manual review when needed
+- **Config Versioning**: Added `configVersion` field to config.json schema
+  - Enables automatic detection of config schema changes
+  - Supports safe upgrades with schema migrations
+
+**Breaking Changes:**
+- **Repository Structure**: Git repository moved to `_dev/` subdirectory
+  - All Git operations must be run from `C:\AppInstall\dev\powershell-console\_dev`
+  - Update any scripts/aliases that reference the old path
+- **PowerShell Profile**: If using aws-prompt-indicator module, update Import-Module path:
+  - Old: `C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\...`
+  - New: `C:\AppInstall\dev\powershell-console\_dev\modules\aws-prompt-indicator\...`
+
+**Documentation:**
+- Updated REPOS.md with new _dev path and DEV/PROD structure
+- Updated CLAUDE.md with DEV/PROD workflow and config management process
+- Added comprehensive upgrade script documentation
+
 ### v1.6.0 (2025-11-13)
 
 **Package Manager Enhancement: Installed Package Visibility & Version Support**

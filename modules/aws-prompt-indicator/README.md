@@ -93,18 +93,19 @@ The best way to use this module is to load it in your PowerShell profile so it's
 
 **Add to your `$PROFILE`** (typically `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
 
-> **Note for v1.7.0+**: The repository structure changed. Use `\_dev` in the path (see migration notes below).
-
 ```powershell
 # AWS Prompt Indicator - Simple two-line integration
-Import-Module "C:\AppInstall\dev\powershell-console\_dev\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
-Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\_dev\config.json" -OhMyPoshTheme "C:\AppInstall\dev\powershell-console\_dev\modules\aws-prompt-indicator\quick-term-aws.omp.json" | Out-Null
+# Adjust paths to where you installed powershell-console
+Import-Module "C:\path\to\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1" -Force -DisableNameChecking
+Enable-AwsPromptIndicator -ConfigPath "C:\path\to\powershell-console\config.json" -OhMyPoshTheme "C:\path\to\powershell-console\modules\aws-prompt-indicator\quick-term-aws.omp.json" | Out-Null
 ```
 
-**Migration Note (v1.6.0 → v1.7.0):**
-If upgrading from v1.6.0 or earlier, update your PowerShell profile paths:
-- Old: `...powershell-console\modules\...`
-- New: `...powershell-console\_dev\modules\...`
+**Example paths:**
+- Regular installation: `C:\Tools\powershell-console\modules\...`
+- Cloned from GitHub: `C:\Users\YourName\repos\powershell-console\modules\...`
+- Repository maintainer (dev): `C:\AppInstall\dev\powershell-console\_dev\modules\...`
+
+> **Note:** Replace `C:\path\to\powershell-console` with wherever you installed or cloned the repository.
 
 That's it! The `Enable-AwsPromptIndicator` function handles everything:
 - Initializes the module with your config

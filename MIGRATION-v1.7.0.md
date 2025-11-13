@@ -2,19 +2,19 @@
 
 ## Overview
 
-Version 1.7.0 introduces DEV/PROD environment separation. This guide helps you migrate from the old flat structure to the new _dev/_prod structure.
+Version 1.7.0 adds config versioning and environment indicators. **No directory structure changes** for regular users - the `_dev/_prod` structure is only for repository maintainers.
 
 ## ⚠️ Action Required After Upgrade
 
-### 1. Update PowerShell Profile Path
+### 1. Update PowerShell Profile Path (Repository Maintainers Only)
 
-If you're using the `aws-prompt-indicator` module in your PowerShell profile, **you must update the path**.
+> **Note:** This section **only applies to repository maintainers** who work with the `_dev/_prod` structure. Regular users should skip to section 2.
+
+If you're a repository maintainer and using the `aws-prompt-indicator` module in your PowerShell profile, update the path from the old flat structure to the new `_dev` location:
 
 **Location:** `Microsoft.PowerShell_profile.ps1`
-**Typical Path:** `C:\Users\<username>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
-**Or:** `C:\Users\<username>\OneDrive - Company\PowerShell\Microsoft.PowerShell_profile.ps1`
 
-**Find this line:**
+**Change from:**
 ```powershell
 Import-Module "C:\AppInstall\dev\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1"
 Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\config.json"
@@ -26,10 +26,17 @@ Import-Module "C:\AppInstall\dev\powershell-console\_dev\modules\aws-prompt-indi
 Enable-AwsPromptIndicator -ConfigPath "C:\AppInstall\dev\powershell-console\_dev\config.json"
 ```
 
-**What changed:**
-- Added `\_dev` to both paths
-- Module path: `...\powershell-console\_dev\modules\...`
-- Config path: `...\powershell-console\_dev\config.json`
+### 1b. Regular Users (No Path Change Needed)
+
+> **For regular users:** Your PowerShell profile paths remain unchanged. Just update to match wherever you installed the console:
+
+**Example** (adjust to your installation location):
+```powershell
+Import-Module "C:\Tools\powershell-console\modules\aws-prompt-indicator\AwsPromptIndicator.psm1"
+Enable-AwsPromptIndicator -ConfigPath "C:\Tools\powershell-console\config.json"
+```
+
+**No change needed** - the paths stay the same as before, pointing to your installation directory.
 
 ### 2. Update config.json (Automatic via upgrade-prod.ps1)
 

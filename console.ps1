@@ -9,8 +9,22 @@ param(
 # Version constant
 $script:ConsoleVersion = "1.7.0"
 
+# Detect environment based on script path
+$scriptPath = $PSScriptRoot
+if ($scriptPath -match '[\\/]_dev[\\/]?$') {
+    $script:Environment = "DEV"
+    $script:EnvColor = "Yellow"
+} elseif ($scriptPath -match '[\\/]_prod[\\/]?$') {
+    $script:Environment = "PROD"
+    $script:EnvColor = "Green"
+} else {
+    $script:Environment = "UNKNOWN"
+    $script:EnvColor = "Red"
+}
+
 # Handle double-dash arguments (--version, --help) by checking $MyInvocation
 if ($MyInvocation.Line -match '--version') {
+    Write-Host "[$script:Environment] " -ForegroundColor $script:EnvColor -NoNewline
     Write-Host "powershell-console version $script:ConsoleVersion" -ForegroundColor Cyan
     exit 0
 }
@@ -34,6 +48,7 @@ if ($MyInvocation.Line -match '--help') {
 
 # Handle -Version or -v flag
 if ($Version -or $v) {
+    Write-Host "[$script:Environment] " -ForegroundColor $script:EnvColor -NoNewline
     Write-Host "powershell-console version $script:ConsoleVersion" -ForegroundColor Cyan
     exit 0
 }
@@ -73,6 +88,16 @@ $script:OriginalPSOutputEncoding = $OutputEncoding
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Don't modify PSStyle.OutputRendering - let it stay as ANSI for Oh-My-Posh compatibility
+
+# Set window title with environment indicator
+$host.UI.RawUI.WindowTitle = "PowerShell Console [$script:Environment] v$script:ConsoleVersion"
+
+# Display startup banner with environment indicator
+Write-Host ""
+Write-Host "[$script:Environment] " -ForegroundColor $script:EnvColor -NoNewline
+Write-Host "PowerShell Console " -ForegroundColor Cyan -NoNewline
+Write-Host "v$script:ConsoleVersion" -ForegroundColor Gray
+Write-Host ""
 
 # Function to restore console state on exit
 function Restore-ConsoleState {

@@ -36,6 +36,10 @@ Implemented a dual environment structure to separate active development from pro
   - `_dev/` - Development environment with Git repository
   - `_prod/` - Production environment for daily use (stable releases only)
   - Separate config.json files for each environment
+- **Environment Indicators**: Visual indicators to identify which environment you're running
+  - Startup banner shows `[DEV]` (yellow), `[PROD]` (green), or `[UNKNOWN]` (red)
+  - Window title displays environment: "PowerShell Console [DEV] v1.7.0"
+  - Version flags (--version, -v) show environment indicator
 - **Smart Config Merge**: Created `upgrade-prod.ps1` script with intelligent config management
   - Automatically merges new config fields from releases
   - Preserves all user values during upgrades

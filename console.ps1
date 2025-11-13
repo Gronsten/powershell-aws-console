@@ -3312,9 +3312,14 @@ function Start-CodeCount {
     }
 
     # Initialize navigation state
-    # $PSScriptRoot is the script directory (e.g., C:\AppInstall\dev\powershell-console)
-    # $devRoot is the parent directory (e.g., C:\AppInstall\dev)
-    $devRoot = Split-Path $PSScriptRoot -Parent
+    # Read devRoot from config.json (same as count-lines.py does)
+    if ($script:Config.paths.devRoot) {
+        $devRoot = $script:Config.paths.devRoot
+    } else {
+        # Fallback to parent directory if devRoot not configured
+        Write-Host "`nWarning: paths.devRoot not found in config.json, using parent directory" -ForegroundColor Yellow
+        $devRoot = Split-Path $PSScriptRoot -Parent
+    }
     $currentPath = $devRoot
     $pathStack = @()
     $selections = @{}  # Track selections by full path

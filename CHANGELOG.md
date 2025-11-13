@@ -54,8 +54,10 @@ Implemented a dual environment structure to separate active development from pro
   - Supports safe upgrades with schema migrations
 
 **Bug Fixes:**
-- **Code Count Fix**: Updated count-lines.py to read `devRoot` from config.json
-  - No longer relies on relative path navigation (parent.parent)
+- **Code Count Fix**: Updated both count-lines.py and Start-CodeCount to read `devRoot` from config.json
+  - count-lines.py: No longer relies on relative path navigation (parent.parent)
+  - Start-CodeCount: Now reads paths.devRoot from config instead of calculating parent directory
+  - Both use same config source for consistency
   - Explicitly configured in config.json paths.devRoot
   - Works correctly with new _dev directory structure
 

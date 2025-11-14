@@ -2759,6 +2759,9 @@ function Show-NetworkConfiguration {
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
     try {
+        # Show progress spinner while gathering information
+        Write-Host "Gathering network information" -NoNewline -ForegroundColor Yellow
+
         # Get all network adapters (including hidden ones)
         # Only get adapters that are physical or virtual (exclude WAN Miniport, etc.)
         $allAdapters = Get-NetAdapter -IncludeHidden | Where-Object {
@@ -2766,14 +2769,25 @@ function Show-NetworkConfiguration {
         }
 
         if (-not $allAdapters) {
+            Write-Host "`r                                        `r" -NoNewline  # Clear spinner line
             Write-Host "No network adapters found." -ForegroundColor Yellow
             return
         }
 
-        # Build table data
+        # Build table data with progress spinner
         $tableData = @()
+        $spinnerChars = @('|', '/', '-', '\')
+        $spinnerIndex = 0
+        $adapterCount = $allAdapters.Count
+        $currentAdapter = 0
 
         foreach ($netAdapter in $allAdapters) {
+            $currentAdapter++
+
+            # Update spinner
+            $spinner = $spinnerChars[$spinnerIndex % 4]
+            Write-Host "`r$spinner Gathering network information ($currentAdapter/$adapterCount)..." -NoNewline -ForegroundColor Yellow
+            $spinnerIndex++
             # Try to get IP configuration for this adapter
             # Use a scriptblock with redirection to suppress all output streams
             $ipConfig = $null
@@ -2840,6 +2854,9 @@ function Show-NetworkConfiguration {
                 IPTypePriority  = $ipType
             }
         }
+
+        # Clear spinner line
+        Write-Host "`r                                                                `r" -NoNewline
 
         # Sort by status (Up first), then by IP type (routable first), then by adapter name
         $tableData = $tableData | Sort-Object StatusPriority, IPTypePriority, Adapter

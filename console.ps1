@@ -2712,16 +2712,16 @@ function Start-InteractivePing {
     )
 
     Write-Host "Starting continuous ping to $Target..." -ForegroundColor Green
-    Write-Host "Press 'Q' to quit and return to menu" -ForegroundColor DarkYellow
+    Write-Host "Press 'Q' or 'Esc' to quit and return to menu" -ForegroundColor DarkYellow
     Write-Host ""
 
     $pingCount = 0
 
     while ($true) {
-        # Check if Q key was pressed
+        # Check if Q or Esc key was pressed
         if ([Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
-            if ($key.KeyChar -eq 'q' -or $key.KeyChar -eq 'Q') {
+            if ($key.KeyChar -eq 'q' -or $key.KeyChar -eq 'Q' -or $key.Key -eq 'Escape') {
                 Write-Host ""
                 Write-Host "Ping stopped by user." -ForegroundColor Cyan
                 break
@@ -2995,6 +2995,11 @@ function Invoke-StandardPause {
     )
 
     Write-Host $Message -ForegroundColor Gray -NoNewline
+
+    # Clear any lingering keyboard buffer before reading
+    while ([Console]::KeyAvailable) {
+        [Console]::ReadKey($true) | Out-Null
+    }
 
     while ($true) {
         $key = [Console]::ReadKey($true)

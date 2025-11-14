@@ -2980,7 +2980,7 @@ function Invoke-StandardPause {
         # Responds to: Enter, Esc, Q
 
     .EXAMPLE
-        Invoke-StandardPause -Message "Custom message..." -AllowQuit:$false
+        Invoke-StandardPause -Message "Custom message..." -AllowQuit $false
         # Shows custom message
         # Responds to: Enter, Esc only (Q disabled)
         # Returns $true if Enter, $false if Esc
@@ -2990,8 +2990,8 @@ function Invoke-StandardPause {
     #>
     param(
         [string]$Message = "Press Enter to continue...",
-        [switch]$AllowQuit = $true,
-        [switch]$AllowEscape = $true
+        [bool]$AllowQuit = $true,
+        [bool]$AllowEscape = $true
     )
 
     Write-Host $Message -ForegroundColor Gray -NoNewline

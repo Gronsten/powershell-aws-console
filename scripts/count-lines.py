@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Fast line counter for projects with exclusion support."""
+"""Fast line counter for projects with exclusion visibility.
+
+Shows line counts per project with inline exclusion indicators:
+- White/normal text: Files included in count
+- Gray text: Files/directories excluded from count
+- Excluded column: Shows count of excluded items (e.g., "26(f), 1(d)")
+
+Usage:
+    python count-lines.py [PATH]
+
+Arguments:
+    PATH    Optional path to analyze (default: devRoot from config.json)
+
+Examples:
+    python count-lines.py
+    python count-lines.py C:\\Projects\\myapp
+"""
 
 import os
 import sys
@@ -77,10 +93,11 @@ def should_exclude(file_path: Path, base_path: Path, dev_root: Path) -> bool:
             if file_path.suffix == '.csv':
                 return True
 
-        # powershell-console: exclude files with 'backup' in name
+        # powershell-console: exclude files with 'backup' in name and _prod directory
         elif project == 'powershell-console':
             if (file_path.name == 'npm-packages.json' or
-                'backup' in file_path.name.lower()):
+                'backup' in file_path.name.lower() or
+                '_prod' in parts):
                 return True
 
     return False
@@ -107,25 +124,45 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     if dev_root is None:
         dev_root = base_path
 
-    project_stats = defaultdict(lambda: {'files': 0, 'lines': 0})
+    # Track both included and excluded items per project
+    project_stats = defaultdict(lambda: {
+        'files': 0, 'lines': 0,
+        'excluded_files': 0, 'excluded_dirs': 0
+    })
+
     total_files = 0
     total_lines = 0
-    excluded_files = 0
+    total_excluded_files = 0
+    total_excluded_dirs = 0
 
     for root, dirs, files in os.walk(base_path):
-        # Skip hidden directories and git directories
+        # Track excluded directories (.git, .hidden, node_modules)
+        original_dirs = dirs.copy()
         dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'node_modules']
+
+        # Count excluded directories by project
+        for d in original_dirs:
+            if d not in dirs:
+                try:
+                    dir_path = Path(root) / d
+                    rel_path = dir_path.relative_to(base_path)
+                    project = rel_path.parts[0] if len(rel_path.parts) > 0 else 'root'
+                    project_stats[project]['excluded_dirs'] += 1
+                    total_excluded_dirs += 1
+                except:
+                    continue
 
         for file in files:
             file_path = Path(root) / file
 
-            if should_exclude(file_path, base_path, dev_root):
-                excluded_files += 1
-                continue
-
             try:
                 rel_path = file_path.relative_to(base_path)
                 project = rel_path.parts[0] if len(rel_path.parts) > 0 else 'root'
+
+                if should_exclude(file_path, base_path, dev_root):
+                    project_stats[project]['excluded_files'] += 1
+                    total_excluded_files += 1
+                    continue
 
                 lines = count_lines_in_file(file_path)
 
@@ -138,28 +175,69 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
                 continue
 
     # Display results
-    print("\n" + "="*70)
+    print("\n" + "="*80)
     print(f"ANALYZING: {base_path}")
-    print("="*70)
-    print(f"{'Project':<30} {'Files':>12} {'Lines':>15}")
-    print("-"*70)
+    print("="*80)
+    print(f"{'Project':<30} {'Files':>10} {'Lines':>13} {'Excluded':>15} {'Status':<10}")
+    print("-"*80)
 
-    # Sort by lines descending
+    # Color codes for terminal output
+    GRAY = '\033[90m'    # Excluded items
+    WHITE = '\033[97m'   # Included items
+    YELLOW = '\033[93m'  # Highlighting
+    RESET = '\033[0m'
+
+    # Sort by lines descending (included items only)
     sorted_projects = sorted(project_stats.items(),
                             key=lambda x: x[1]['lines'],
                             reverse=True)
 
     for project, stats in sorted_projects:
-        print(f"{project:<30} {stats['files']:>12,} {stats['lines']:>15,}")
+        # Determine if this project has any included files
+        has_included = stats['files'] > 0
+        has_excluded = stats['excluded_files'] > 0 or stats['excluded_dirs'] > 0
+
+        if has_included:
+            # Show included files (normal white text)
+            excluded_parts = []
+            if stats['excluded_files'] > 0:
+                excluded_parts.append(f"{stats['excluded_files']}(f)")
+            if stats['excluded_dirs'] > 0:
+                excluded_parts.append(f"{stats['excluded_dirs']}(d)")
+            excluded_count = ", ".join(excluded_parts) if excluded_parts else "0"
+
+            color = WHITE if has_excluded else RESET
+            print(f"{color}{project:<30} {stats['files']:>10,} {stats['lines']:>13,} {excluded_count:>15} {'included':<10}{RESET}")
+
+        if has_excluded and not has_included:
+            # Show projects that are entirely excluded (gray text)
+            excluded_parts = []
+            if stats['excluded_files'] > 0:
+                excluded_parts.append(f"{stats['excluded_files']}(f)")
+            if stats['excluded_dirs'] > 0:
+                excluded_parts.append(f"{stats['excluded_dirs']}(d)")
+            excluded_desc = ", ".join(excluded_parts)
+
+            print(f"{GRAY}{project:<30} {'---':>10} {'---':>13} {excluded_desc:>15} {'excluded':<10}{RESET}")
 
     elapsed = time.time() - start_time
 
-    print("="*70)
-    print(f"{'TOTAL':<30} {total_files:>12,} {total_lines:>15,}")
-    print("="*70)
-    print(f"\nExcluded files: {excluded_files:,}")
-    print(f"Processing time: {elapsed:.2f} seconds")
-    print("="*70)
+    print("="*80)
+    print(f"{'TOTAL INCLUDED':<30} {total_files:>10,} {total_lines:>13,} {'':<15} {'':<10}")
+
+    # Format total excluded
+    excluded_parts = []
+    if total_excluded_files > 0:
+        excluded_parts.append(f"{total_excluded_files}(f)")
+    if total_excluded_dirs > 0:
+        excluded_parts.append(f"{total_excluded_dirs}(d)")
+    total_excluded_desc = ", ".join(excluded_parts) if excluded_parts else "0"
+
+    print(f"{GRAY}{'TOTAL EXCLUDED':<30} {'---':>10} {'---':>13} {total_excluded_desc:>15} {'':<10}{RESET}")
+    print("="*80)
+    print(f"\nProcessing time: {elapsed:.2f} seconds")
+    print(f"Legend: {WHITE}Normal text{RESET} = included, {GRAY}Gray{RESET} = excluded | Format: X(f)=files, X(d)=dirs")
+    print("="*80)
 
 if __name__ == '__main__':
     # Load dev root from config.json
@@ -194,9 +272,19 @@ if __name__ == '__main__':
 
         # If it's a file, count just that file
         if base_path.is_file():
-            print(f"\nCounting single file: {base_path}")
             lines = count_lines_in_file(base_path)
-            print(f"Lines: {lines:,}")
+            filename = base_path.name
+
+            # Display in standard table format
+            print("\n" + "="*80)
+            print(f"ANALYZING: {base_path}")
+            print("="*80)
+            print(f"{'File':<30} {'Files':>10} {'Lines':>13} {'Excluded':>15} {'Status':<10}")
+            print("-"*80)
+            print(f"{filename:<30} {1:>10,} {lines:>13,} {'0':>15} {'included':<10}")
+            print("="*80)
+            print(f"{'TOTAL':<30} {1:>10,} {lines:>13,}")
+            print("="*80)
             sys.exit(0)
     else:
         # Default to C:\AppInstall\dev

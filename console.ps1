@@ -2660,15 +2660,15 @@ function Show-PackageManagerMenu {
     $defaultMenu = @(
         (New-MenuAction "Manage Updates" {
             Select-PackagesToUpdate
-            pause
+            Invoke-StandardPause
         }),
         (New-MenuAction "List Installed Packages" {
             Get-InstalledPackages
-            pause
+            Invoke-StandardPause
         }),
         (New-MenuAction "Search Packages" {
             Search-Packages
-            pause
+            Invoke-StandardPause
         })
     )
 
@@ -2712,16 +2712,16 @@ function Start-InteractivePing {
     )
 
     Write-Host "Starting continuous ping to $Target..." -ForegroundColor Green
-    Write-Host "Press 'Q' to quit and return to menu" -ForegroundColor DarkYellow
+    Write-Host "Press 'Q' or 'Esc' to quit and return to menu" -ForegroundColor DarkYellow
     Write-Host ""
 
     $pingCount = 0
 
     while ($true) {
-        # Check if Q key was pressed
+        # Check if Q or Esc key was pressed
         if ([Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
-            if ($key.KeyChar -eq 'q' -or $key.KeyChar -eq 'Q') {
+            if ($key.KeyChar -eq 'q' -or $key.KeyChar -eq 'Q' -or $key.Key -eq 'Escape') {
                 Write-Host ""
                 Write-Host "Ping stopped by user." -ForegroundColor Cyan
                 break
@@ -2759,6 +2759,9 @@ function Show-NetworkConfiguration {
     Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
     try {
+        # Show progress spinner while gathering information
+        Write-Host "Gathering network information" -NoNewline -ForegroundColor Yellow
+
         # Get all network adapters (including hidden ones)
         # Only get adapters that are physical or virtual (exclude WAN Miniport, etc.)
         $allAdapters = Get-NetAdapter -IncludeHidden | Where-Object {
@@ -2766,14 +2769,25 @@ function Show-NetworkConfiguration {
         }
 
         if (-not $allAdapters) {
+            Write-Host "`r                                        `r" -NoNewline  # Clear spinner line
             Write-Host "No network adapters found." -ForegroundColor Yellow
             return
         }
 
-        # Build table data
+        # Build table data with progress spinner
         $tableData = @()
+        $spinnerChars = @('|', '/', '-', '\')
+        $spinnerIndex = 0
+        $adapterCount = $allAdapters.Count
+        $currentAdapter = 0
 
         foreach ($netAdapter in $allAdapters) {
+            $currentAdapter++
+
+            # Update spinner
+            $spinner = $spinnerChars[$spinnerIndex % 4]
+            Write-Host "`r$spinner Gathering network information ($currentAdapter/$adapterCount)..." -NoNewline -ForegroundColor Yellow
+            $spinnerIndex++
             # Try to get IP configuration for this adapter
             # Use a scriptblock with redirection to suppress all output streams
             $ipConfig = $null
@@ -2840,6 +2854,9 @@ function Show-NetworkConfiguration {
                 IPTypePriority  = $ipType
             }
         }
+
+        # Clear spinner line
+        Write-Host "`r                                                                `r" -NoNewline
 
         # Sort by status (Up first), then by IP type (routable first), then by adapter name
         $tableData = $tableData | Sort-Object StatusPriority, IPTypePriority, Adapter
@@ -2937,6 +2954,74 @@ function Convert-PrefixToSubnetMask {
     $bytes = [BitConverter]::GetBytes([UInt32]$mask)
     [Array]::Reverse($bytes)
     return ($bytes -join '.')
+}
+
+function Invoke-StandardPause {
+    <#
+    .SYNOPSIS
+        Standardized pause function with consistent key handling across the console.
+
+    .DESCRIPTION
+        Provides a unified pause experience that responds to Enter, Esc, and optionally Q.
+        Replaces inconsistent pause patterns throughout the codebase.
+
+    .PARAMETER Message
+        Custom message to display (default: "Press Enter to continue...")
+
+    .PARAMETER AllowQuit
+        If $true, also accepts 'Q' to quit and returns $false (default: $true)
+
+    .PARAMETER AllowEscape
+        If $true, also accepts 'Esc' to quit and returns $false (default: $true)
+
+    .EXAMPLE
+        Invoke-StandardPause
+        # Shows: "Press Enter to continue..."
+        # Responds to: Enter, Esc, Q
+
+    .EXAMPLE
+        Invoke-StandardPause -Message "Custom message..." -AllowQuit $false
+        # Shows custom message
+        # Responds to: Enter, Esc only (Q disabled)
+        # Returns $true if Enter, $false if Esc
+
+    .OUTPUTS
+        Boolean - $true if user pressed Enter, $false if user pressed Q/Esc to quit
+    #>
+    param(
+        [string]$Message = "Press Enter to continue...",
+        [bool]$AllowQuit = $true,
+        [bool]$AllowEscape = $true
+    )
+
+    Write-Host $Message -ForegroundColor Gray -NoNewline
+
+    # Clear any lingering keyboard buffer before reading
+    while ([Console]::KeyAvailable) {
+        [Console]::ReadKey($true) | Out-Null
+    }
+
+    while ($true) {
+        $key = [Console]::ReadKey($true)
+
+        # Always accept Enter
+        if ($key.Key -eq 'Enter') {
+            Write-Host ""  # New line after key press
+            return $true
+        }
+
+        # Accept Esc if enabled
+        if ($AllowEscape -and $key.Key -eq 'Escape') {
+            Write-Host ""  # New line after key press
+            return $false
+        }
+
+        # Accept Q if enabled
+        if ($AllowQuit -and ($key.Key -eq 'Q' -or $key.KeyChar -eq 'q')) {
+            Write-Host ""  # New line after key press
+            return $false
+        }
+    }
 }
 
 function Invoke-TimedPause {
@@ -3238,9 +3323,14 @@ function Start-MerakiBackup {
     Write-Host "Starting Meraki Backup..." -ForegroundColor Green
     Write-Host ""
 
-    # Check if meraki-api folder exists in parent directory (C:\AppInstall\dev\meraki-api)
+    # Read devRoot from config.json (same as count-lines.py does)
     # meraki-api is a separate project at the same level as powershell-console
-    $devRoot = Split-Path $PSScriptRoot -Parent
+    if ($script:Config.paths.devRoot) {
+        $devRoot = $script:Config.paths.devRoot
+    } else {
+        # Fallback to parent directory if devRoot not configured
+        $devRoot = Split-Path $PSScriptRoot -Parent
+    }
     $merakiPath = Join-Path $devRoot "meraki-api"
 
     if (Test-Path $merakiPath) {
@@ -3251,14 +3341,14 @@ function Start-MerakiBackup {
             $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
             if (-not $pythonCmd) {
                 Write-Host "Python not found in PATH. Please ensure Python is installed." -ForegroundColor Red
-                pause
+                Invoke-StandardPause
                 return
             }
 
             # Check if backup.py exists
             if (-not (Test-Path "backup.py")) {
                 Write-Host "backup.py not found in meraki-api directory." -ForegroundColor Red
-                pause
+                Invoke-StandardPause
                 return
             }
 
@@ -3289,7 +3379,7 @@ function Start-MerakiBackup {
         Write-Host "Please ensure the meraki-api folder exists in the dev directory (same level as powershell-console)." -ForegroundColor Yellow
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Start-CodeCount {
@@ -3300,14 +3390,14 @@ function Start-CodeCount {
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if (-not $pythonCmd) {
         Write-Host "`nPython not found in PATH. Please ensure Python is installed." -ForegroundColor Red
-        pause
+        Invoke-StandardPause
         return  # This is a hard error, exit to main menu
     }
 
     # Check if count-lines.py exists
     if (-not (Test-Path $countScriptPath)) {
         Write-Host "`ncount-lines.py not found at: $countScriptPath" -ForegroundColor Red
-        pause
+        Invoke-StandardPause
         return  # This is a hard error, exit to main menu
     }
 
@@ -3366,8 +3456,7 @@ function Start-CodeCount {
         }
 
         if ($menuOptions.Count -eq 0) {
-            Write-Host "Empty directory. Press any key to go back..." -ForegroundColor Yellow
-            [Console]::ReadKey($true) | Out-Null
+            Invoke-StandardPause -Message "Empty directory. Press Enter to go back..."
             if ($pathStack.Count -gt 0) {
                 $currentPath = $pathStack[-1]
                 $pathStack = $pathStack[0..($pathStack.Count - 2)]
@@ -3513,7 +3602,7 @@ function Start-CodeCount {
 
     if ($selectedItems.Count -eq 0 -and -not $countAll) {
         Write-Host "`nNo items selected." -ForegroundColor Yellow
-        pause
+        Invoke-StandardPause
         Start-CodeCount
         return
     }
@@ -3533,8 +3622,7 @@ function Start-CodeCount {
 
         # If there are also individual items selected, pause before showing them
         if ($selectedItems.Count -gt 0) {
-            Write-Host "Press Enter to view individual project counts..." -ForegroundColor Gray
-            Read-Host
+            Invoke-StandardPause -Message "Press Enter to view individual project counts..."
         }
     }
 
@@ -3558,18 +3646,15 @@ function Start-CodeCount {
 
         # Pause between items (but not after the last one)
         if ($currentItem -lt $itemCount) {
-            Write-Host "Press Enter to continue (or Q to quit viewing more)..." -ForegroundColor Gray -NoNewline
-            $key = [Console]::ReadKey($true)
-            Write-Host ""  # New line after key press
-
-            if ($key.Key -eq 'Q') {
+            $continue = Invoke-StandardPause -Message "Press Enter to continue (or Q/Esc to quit viewing more)..."
+            if (-not $continue) {
                 Write-Host "`nSkipping remaining projects..." -ForegroundColor Yellow
                 break
             }
         }
     }
 
-    pause
+    Invoke-StandardPause
     Start-CodeCount
 }
 
@@ -3580,7 +3665,7 @@ function Get-BackupScriptPath {
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return $null
     }
 
@@ -3620,7 +3705,7 @@ function Invoke-BackupScript {
     }
 
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 
@@ -3669,7 +3754,7 @@ function Start-BackupDevEnvironment {
 
     if ($confirm.ToLower() -eq "n") {
         Write-Host "Backup cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -3719,26 +3804,26 @@ function Show-MainMenu {
     $defaultMenu = @(
         (New-MenuAction "Ping Google" {
             Start-InteractivePing -Target "google.com"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "IP Config" {
             Show-NetworkConfiguration
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "AWS Login" {
             Start-AwsWorkflow
         }),
         (New-MenuAction "PowerShell Profile Edit" {
             Invoke-Expression "code '$($script:Config.paths.profilePath)'"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Okta YAML Edit" {
             Invoke-Expression "code '$($script:Config.paths.oktaYamlPath)'"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Whitelist Links Folder" {
             Invoke-Expression "icacls '$($script:Config.paths.linksPath)' /t /setintegritylevel m"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Meraki Backup" {
             Start-MerakiBackup
@@ -3863,7 +3948,7 @@ function Invoke-AwsAuthentication {
     }
     catch {
         Write-Host "Authentication failed: $($_.Exception.Message)" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 }
@@ -4091,7 +4176,7 @@ function Sync-AwsAccountsFromOkta {
     $confirm = Read-Host "Continue with sync? (Y/n)"
     if ($confirm.ToLower() -eq "n") {
         Write-Host "Sync cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -4122,7 +4207,7 @@ function Sync-AwsAccountsFromOkta {
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: okta-aws-cli failed with exit code $LASTEXITCODE" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -4657,7 +4742,7 @@ function Sync-AwsAccountsFromOkta {
         Write-Host ""
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Show-AwsAccountMenu {
@@ -4949,7 +5034,7 @@ function Start-AlohaRemoteAccess {
             return
         } else {
             Write-Host "Cannot proceed without remote host configuration." -ForegroundColor Red
-            pause
+    Invoke-StandardPause
             return
         }
     }
@@ -4959,7 +5044,7 @@ function Start-AlohaRemoteAccess {
 
     if ($useSettings.ToLower() -eq "n") {
         Write-Host "Aloha remote access cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5058,13 +5143,13 @@ function Get-Ec2InstanceInfo {
         if ($LASTEXITCODE -ne 0) {
             Write-Host "AWS credentials have expired or are invalid." -ForegroundColor Red
             Write-Host "Please re-authenticate using 'Change AWS Account' option." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
     catch {
         Write-Host "Unable to verify AWS credentials." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5142,7 +5227,7 @@ function Get-Ec2InstanceInfo {
     }
 
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 function Get-RunningInstances {
@@ -5235,7 +5320,7 @@ function Select-Ec2Instance {
 
     if ($instances.Count -eq 0) {
         Write-Host "No instances found." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return $null
     }
 
@@ -5320,7 +5405,7 @@ function Set-DefaultInstanceId {
     # Check if user cancelled (pressed Q)
     if ($selectedInstance -is [hashtable] -and $selectedInstance.Cancelled) {
         Write-Host "Selection cancelled - no changes made." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5342,7 +5427,7 @@ function Set-DefaultInstanceId {
     # Ensure the environment exists in config
     if (-not $config.environments.$global:currentAwsEnvironment) {
         Write-Host "Error: Environment '$global:currentAwsEnvironment' not found in config." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5375,7 +5460,7 @@ function Set-DefaultInstanceId {
     Write-Host "✓ Changes saved to config.json" -ForegroundColor Green
     Write-Host ""
 
-    pause
+    Invoke-StandardPause
 }
 
 function Set-DefaultRemoteHostInfo {
@@ -5389,7 +5474,7 @@ function Set-DefaultRemoteHostInfo {
     # Check if user cancelled (pressed Q)
     if ($selectedInstance -is [hashtable] -and $selectedInstance.Cancelled) {
         Write-Host "Selection cancelled - no changes made." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5404,7 +5489,7 @@ function Set-DefaultRemoteHostInfo {
         $confirm = Read-Host "Clear all remote host settings for this account? (y/N)"
         if ($confirm.ToLower() -ne "y") {
             Write-Host "Configuration not changed." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     } else {
@@ -5464,7 +5549,7 @@ function Set-DefaultRemoteHostInfo {
         $confirm = Read-Host "Save this configuration? (Y/n)"
         if ($confirm.ToLower() -eq "n") {
             Write-Host "Configuration not saved." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
@@ -5476,7 +5561,7 @@ function Set-DefaultRemoteHostInfo {
     # Ensure the environment exists in config
     if (-not $config.environments.$global:currentAwsEnvironment) {
         Write-Host "Error: Environment '$global:currentAwsEnvironment' not found in config." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5525,7 +5610,7 @@ function Set-DefaultRemoteHostInfo {
     Write-Host "✓ Changes saved to config.json" -ForegroundColor Green
     Write-Host ""
 
-    pause
+    Invoke-StandardPause
 }
 
 function Get-InstanceNameById {
@@ -5624,7 +5709,7 @@ function Show-CurrentInstanceSettings {
         }
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Test-InstanceConnectivity {
@@ -5772,13 +5857,13 @@ function Get-VpnConnections {
         if ($LASTEXITCODE -ne 0) {
             Write-Host "AWS credentials have expired or are invalid." -ForegroundColor Red
             Write-Host "Please re-authenticate using 'Change AWS Account' option." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
     catch {
         Write-Host "Unable to verify AWS credentials." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5851,7 +5936,7 @@ function Get-VpnConnections {
 
     # Pause before returning to Instance Management menu
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 function Get-FortiGateConfigs {

@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""Fast line counter for projects with exclusion support."""
+"""Fast line counter for projects with exclusion support.
+
+Usage:
+    python count-lines.py [PATH] [--show-exclusions]
+
+Arguments:
+    PATH                Optional path to analyze (default: devRoot from config.json)
+    --show-exclusions   Display detailed list of excluded files and directories
+
+Examples:
+    python count-lines.py
+    python count-lines.py --show-exclusions
+    python count-lines.py C:\\Projects\\myapp
+    python count-lines.py C:\\Projects\\myapp --show-exclusions
+"""
 
 import os
 import sys
@@ -100,7 +114,7 @@ def count_lines_in_file(file_path: Path) -> int:
             return 0
     return 0
 
-def count_project_lines(base_path: Path, dev_root: Path = None):
+def count_project_lines(base_path: Path, dev_root: Path = None, show_exclusions: bool = False):
     """Count lines across all projects with exclusions."""
     start_time = time.time()
 
@@ -109,19 +123,29 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
         dev_root = base_path
 
     project_stats = defaultdict(lambda: {'files': 0, 'lines': 0})
+    excluded_items = []  # Track excluded files and directories
     total_files = 0
     total_lines = 0
     excluded_files = 0
 
     for root, dirs, files in os.walk(base_path):
         # Skip hidden directories and git directories
+        original_dirs = dirs.copy()
         dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'node_modules']
+
+        # Track excluded directories
+        if show_exclusions:
+            for d in original_dirs:
+                if d not in dirs:
+                    excluded_items.append(('dir', Path(root) / d))
 
         for file in files:
             file_path = Path(root) / file
 
             if should_exclude(file_path, base_path, dev_root):
                 excluded_files += 1
+                if show_exclusions:
+                    excluded_items.append(('file', file_path))
                 continue
 
             try:
@@ -162,6 +186,52 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
     print(f"Processing time: {elapsed:.2f} seconds")
     print("="*70)
 
+    # Show exclusions if requested
+    if show_exclusions and excluded_items:
+        print("\n" + "="*70)
+        print("EXCLUSIONS")
+        print("="*70)
+
+        # Color codes for terminal output
+        BLUE = '\033[94m'   # Directories
+        YELLOW = '\033[93m' # Files
+        RESET = '\033[0m'
+
+        # Group by project
+        exclusions_by_project = defaultdict(lambda: {'dirs': [], 'files': []})
+
+        for item_type, item_path in excluded_items:
+            try:
+                rel_path = item_path.relative_to(base_path)
+                project = rel_path.parts[0] if len(rel_path.parts) > 0 else 'root'
+
+                if item_type == 'dir':
+                    exclusions_by_project[project]['dirs'].append(str(rel_path))
+                else:
+                    exclusions_by_project[project]['files'].append(str(rel_path))
+            except ValueError:
+                continue
+
+        # Sort projects alphabetically
+        sorted_exclusions = sorted(exclusions_by_project.items())
+
+        for project, items in sorted_exclusions:
+            print(f"\n{project}:")
+
+            # Show directories first (sorted)
+            if items['dirs']:
+                for d in sorted(items['dirs']):
+                    print(f"  {BLUE}[DIR]{RESET}  {d}")
+
+            # Then files (sorted)
+            if items['files']:
+                for f in sorted(items['files']):
+                    print(f"  {YELLOW}[FILE]{RESET} {f}")
+
+        print("\n" + "="*70)
+        print(f"Total exclusions: {len(excluded_items):,} ({len([x for x in excluded_items if x[0] == 'dir']):,} dirs, {len([x for x in excluded_items if x[0] == 'file']):,} files)")
+        print("="*70)
+
 if __name__ == '__main__':
     # Load dev root from config.json
     script_dir = Path(__file__).resolve().parent
@@ -177,16 +247,26 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Parse command line arguments
-    if len(sys.argv) > 1:
-        # User specified a path
-        target = sys.argv[1]
+    show_exclusions = False
+    target_path = None
 
+    # Check for flags
+    args = sys.argv[1:]
+    if '--show-exclusions' in args:
+        show_exclusions = True
+        args.remove('--show-exclusions')
+
+    # Check for path argument
+    if len(args) > 0:
+        target_path = args[0]
+
+    if target_path:
         # Convert to absolute path
-        if os.path.isabs(target):
-            base_path = Path(target)
+        if os.path.isabs(target_path):
+            base_path = Path(target_path)
         else:
             # Relative path - resolve from current directory
-            base_path = Path(os.getcwd()) / target
+            base_path = Path(os.getcwd()) / target_path
 
         # Validate path exists
         if not base_path.exists():
@@ -203,4 +283,4 @@ if __name__ == '__main__':
         # Default to C:\AppInstall\dev
         base_path = dev_root
 
-    count_project_lines(base_path, dev_root)
+    count_project_lines(base_path, dev_root, show_exclusions)

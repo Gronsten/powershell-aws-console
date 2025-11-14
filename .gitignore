@@ -6,6 +6,9 @@
 config.json
 *.backup-*
 
+# Local-only upgrade script (exists in parent directory)
+upgrade-prod.ps1
+
 # Okta configuration
 .okta/
 okta.yaml

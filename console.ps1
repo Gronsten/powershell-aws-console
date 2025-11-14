@@ -2956,6 +2956,68 @@ function Convert-PrefixToSubnetMask {
     return ($bytes -join '.')
 }
 
+function Invoke-StandardPause {
+    <#
+    .SYNOPSIS
+        Standardized pause function with consistent key handling across the console.
+
+    .DESCRIPTION
+        Provides a unified pause experience that responds to Enter, Esc, and optionally Q.
+        Replaces inconsistent pause patterns throughout the codebase.
+
+    .PARAMETER Message
+        Custom message to display (default: "Press Enter to continue...")
+
+    .PARAMETER AllowQuit
+        If $true, also accepts 'Q' to quit and returns $false (default: $false)
+
+    .PARAMETER AllowEscape
+        If $true, also accepts 'Esc' to quit and returns $false (default: $true)
+
+    .EXAMPLE
+        Invoke-StandardPause
+        # Shows: "Press Enter to continue..."
+        # Responds to: Enter, Esc
+
+    .EXAMPLE
+        Invoke-StandardPause -Message "Press Enter to continue (or Q to quit)..." -AllowQuit
+        # Responds to: Enter, Esc, Q
+        # Returns $true if Enter, $false if Q or Esc
+
+    .OUTPUTS
+        Boolean - $true if user pressed Enter, $false if user pressed Q/Esc to quit
+    #>
+    param(
+        [string]$Message = "Press Enter to continue...",
+        [switch]$AllowQuit,
+        [switch]$AllowEscape = $true
+    )
+
+    Write-Host $Message -ForegroundColor Gray -NoNewline
+
+    while ($true) {
+        $key = [Console]::ReadKey($true)
+
+        # Always accept Enter
+        if ($key.Key -eq 'Enter') {
+            Write-Host ""  # New line after key press
+            return $true
+        }
+
+        # Accept Esc if enabled
+        if ($AllowEscape -and $key.Key -eq 'Escape') {
+            Write-Host ""  # New line after key press
+            return $false
+        }
+
+        # Accept Q if enabled
+        if ($AllowQuit -and ($key.Key -eq 'Q' -or $key.KeyChar -eq 'q')) {
+            Write-Host ""  # New line after key press
+            return $false
+        }
+    }
+}
+
 function Invoke-TimedPause {
     <#
     .SYNOPSIS

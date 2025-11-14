@@ -272,9 +272,19 @@ if __name__ == '__main__':
 
         # If it's a file, count just that file
         if base_path.is_file():
-            print(f"\nCounting single file: {base_path}")
             lines = count_lines_in_file(base_path)
-            print(f"Lines: {lines:,}")
+            filename = base_path.name
+
+            # Display in standard table format
+            print("\n" + "="*80)
+            print(f"ANALYZING: {base_path}")
+            print("="*80)
+            print(f"{'File':<30} {'Files':>10} {'Lines':>13} {'Excluded':>15} {'Status':<10}")
+            print("-"*80)
+            print(f"{filename:<30} {1:>10,} {lines:>13,} {'0':>15} {'included':<10}")
+            print("="*80)
+            print(f"{'TOTAL':<30} {1:>10,} {lines:>13,}")
+            print("="*80)
             sys.exit(0)
     else:
         # Default to C:\AppInstall\dev

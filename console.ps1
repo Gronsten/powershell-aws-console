@@ -2994,6 +2994,9 @@ function Invoke-StandardPause {
         [bool]$AllowEscape = $true
     )
 
+    # DEBUG: Show parameter values
+    Write-Host "`n[DEBUG] AllowQuit=$AllowQuit, AllowEscape=$AllowEscape" -ForegroundColor Magenta
+
     Write-Host $Message -ForegroundColor Gray -NoNewline
 
     # Clear any lingering keyboard buffer before reading
@@ -3003,6 +3006,9 @@ function Invoke-StandardPause {
 
     while ($true) {
         $key = [Console]::ReadKey($true)
+
+        # DEBUG: Show what key was pressed
+        Write-Host "`n[DEBUG] Key=$($key.Key), KeyChar=$($key.KeyChar)" -ForegroundColor Magenta
 
         # Always accept Enter
         if ($key.Key -eq 'Enter') {

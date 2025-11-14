@@ -20,6 +20,68 @@ All notable changes to this project have been documented during development.
 
 ## Version History
 
+### v1.8.0 (2025-11-14)
+
+**Pause Standardization & User Experience Enhancements**
+
+Major refactoring of pause/break functions for consistent keyboard input handling across all menu actions, plus enhancements to count-lines.py and other user experience improvements.
+
+**No Config Changes Required** - This release is fully backward compatible.
+
+**New Features:**
+- **Pause Standardization**: Complete refactoring for uniform Enter/Esc/Q behavior
+  - New `Invoke-StandardPause` function with consistent keyboard handling
+  - All 45 pause instances systematically replaced across console.ps1
+  - Keyboard buffer clearing to prevent key interference
+  - Added Esc support to ping function (previously Q-only)
+  - Updated config.json menu actions (local only, gitignored)
+  - Result: All pauses now respond uniformly to Enter, Esc, and Q keys
+- **count-lines.py Inline Exclusions**: Redesigned output for better visibility
+  - Shows excluded items inline with included items using color coding
+  - White text: Included files, Gray text: Excluded files
+  - New "Excluded" column with counts (e.g., "26(f), 1(d)")
+  - Always-on visibility without CLI flags
+  - Better integration with existing workflow
+- **count-lines.py Single File Format**: Standardized table output
+  - Single files now use same table structure as project folders
+  - Consistent column headers (File, Files, Lines, Excluded, Status)
+  - Professional formatting with totals section
+- **IP Config Progress Spinner**: Added visual feedback during network gathering
+  - Animated spinner with progress counter (e.g., "| Gathering network information (2/5)...")
+  - Improves user experience during network adapter enumeration
+  - Spinner clears before displaying results
+
+**Bug Fixes:**
+- **Start-MerakiBackup Path Resolution**: Now uses devRoot from config
+  - Changed from hardcoded path derivation to config.paths.devRoot
+  - Added fallback to parent directory for backward compatibility
+  - Matches pattern used in Start-CodeCount function
+  - Ensures consistent path resolution across all functions
+
+**Code Cleanup:**
+- Removed `MIGRATION-v1.7.0.md` (migration completed, info preserved in CHANGELOG)
+- Removed `upgrade-prod.ps1` from `_dev` directory (exists in parent, not for distribution)
+- Added `upgrade-prod.ps1` to `.gitignore` to prevent accidental commits
+
+**Technical Details:**
+- Fixed PowerShell parameter type issue: Changed `[switch]` to `[bool]` for proper default values
+  - `[switch]` parameters don't properly support default `$true` values
+  - `[bool]` parameters correctly support default values
+- Updated 8 menu actions in config.json to use new pause function (Main Menu + Package Manager)
+
+**Files Changed:**
+- `console.ps1` - Pause refactoring, IP spinner, Meraki fix (+195, -140 lines)
+- `scripts/count-lines.py` - Inline exclusions, single file format, _prod exclusion (+136, -105 lines)
+- `.gitignore` - Added upgrade-prod.ps1 (+3 lines)
+- `MIGRATION-v1.7.0.md` - Removed (-211 lines)
+- `upgrade-prod.ps1` - Removed from _dev (-242 lines)
+
+**Total:** 5 files changed, 255 insertions(+), 532 deletions(-)
+
+**Net change:** -277 lines (significant cleanup + new standardization function)
+
+---
+
 ### v1.7.0 (2025-11-13)
 
 **DEV/PROD Environment Separation & Smart Config Merge**

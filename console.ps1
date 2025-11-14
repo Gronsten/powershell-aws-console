@@ -2969,7 +2969,7 @@ function Invoke-StandardPause {
         Custom message to display (default: "Press Enter to continue...")
 
     .PARAMETER AllowQuit
-        If $true, also accepts 'Q' to quit and returns $false (default: $false)
+        If $true, also accepts 'Q' to quit and returns $false (default: $true)
 
     .PARAMETER AllowEscape
         If $true, also accepts 'Esc' to quit and returns $false (default: $true)
@@ -2977,19 +2977,20 @@ function Invoke-StandardPause {
     .EXAMPLE
         Invoke-StandardPause
         # Shows: "Press Enter to continue..."
-        # Responds to: Enter, Esc
+        # Responds to: Enter, Esc, Q
 
     .EXAMPLE
-        Invoke-StandardPause -Message "Press Enter to continue (or Q to quit)..." -AllowQuit
-        # Responds to: Enter, Esc, Q
-        # Returns $true if Enter, $false if Q or Esc
+        Invoke-StandardPause -Message "Custom message..." -AllowQuit:$false
+        # Shows custom message
+        # Responds to: Enter, Esc only (Q disabled)
+        # Returns $true if Enter, $false if Esc
 
     .OUTPUTS
         Boolean - $true if user pressed Enter, $false if user pressed Q/Esc to quit
     #>
     param(
         [string]$Message = "Press Enter to continue...",
-        [switch]$AllowQuit,
+        [switch]$AllowQuit = $true,
         [switch]$AllowEscape = $true
     )
 
@@ -3635,7 +3636,7 @@ function Start-CodeCount {
 
         # Pause between items (but not after the last one)
         if ($currentItem -lt $itemCount) {
-            $continue = Invoke-StandardPause -Message "Press Enter to continue (or Q/Esc to quit viewing more)..." -AllowQuit
+            $continue = Invoke-StandardPause -Message "Press Enter to continue (or Q/Esc to quit viewing more)..."
             if (-not $continue) {
                 Write-Host "`nSkipping remaining projects..." -ForegroundColor Yellow
                 break

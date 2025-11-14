@@ -4,7 +4,7 @@
 Shows line counts per project with inline exclusion indicators:
 - White/normal text: Files included in count
 - Gray text: Files/directories excluded from count
-- Excluded column: Shows count of excluded items (Xf = files, Xd = directories)
+- Excluded column: Shows count of excluded items (e.g., "26 files, 1 dirs")
 
 Usage:
     python count-lines.py [PATH]
@@ -199,18 +199,24 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
 
         if has_included:
             # Show included files (normal white text)
-            excluded_count = f"{stats['excluded_files']}f"
+            excluded_parts = []
+            if stats['excluded_files'] > 0:
+                excluded_parts.append(f"{stats['excluded_files']} files")
             if stats['excluded_dirs'] > 0:
-                excluded_count += f", {stats['excluded_dirs']}d"
+                excluded_parts.append(f"{stats['excluded_dirs']} dirs")
+            excluded_count = ", ".join(excluded_parts) if excluded_parts else "0"
 
             color = WHITE if has_excluded else RESET
             print(f"{color}{project:<30} {stats['files']:>10,} {stats['lines']:>13,} {excluded_count:>15} {'included':<10}{RESET}")
 
         if has_excluded and not has_included:
             # Show projects that are entirely excluded (gray text)
-            excluded_desc = f"{stats['excluded_files']}f"
+            excluded_parts = []
+            if stats['excluded_files'] > 0:
+                excluded_parts.append(f"{stats['excluded_files']} files")
             if stats['excluded_dirs'] > 0:
-                excluded_desc += f", {stats['excluded_dirs']}d"
+                excluded_parts.append(f"{stats['excluded_dirs']} dirs")
+            excluded_desc = ", ".join(excluded_parts)
 
             print(f"{GRAY}{project:<30} {'---':>10} {'---':>13} {excluded_desc:>15} {'excluded':<10}{RESET}")
 
@@ -218,11 +224,19 @@ def count_project_lines(base_path: Path, dev_root: Path = None):
 
     print("="*80)
     print(f"{'TOTAL INCLUDED':<30} {total_files:>10,} {total_lines:>13,} {'':<15} {'':<10}")
-    print(f"{GRAY}{'TOTAL EXCLUDED':<30} {'---':>10} {'---':>13} {f'{total_excluded_files}f, {total_excluded_dirs}d':>15} {'':<10}{RESET}")
+
+    # Format total excluded
+    excluded_parts = []
+    if total_excluded_files > 0:
+        excluded_parts.append(f"{total_excluded_files} files")
+    if total_excluded_dirs > 0:
+        excluded_parts.append(f"{total_excluded_dirs} dirs")
+    total_excluded_desc = ", ".join(excluded_parts) if excluded_parts else "0"
+
+    print(f"{GRAY}{'TOTAL EXCLUDED':<30} {'---':>10} {'---':>13} {total_excluded_desc:>15} {'':<10}{RESET}")
     print("="*80)
     print(f"\nProcessing time: {elapsed:.2f} seconds")
     print(f"Legend: {WHITE}Normal text{RESET} = included in count, {GRAY}Gray text{RESET} = excluded from count")
-    print(f"Excluded format: Xf = X files, Xd = X directories")
     print("="*80)
 
 if __name__ == '__main__':

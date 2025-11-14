@@ -2660,15 +2660,15 @@ function Show-PackageManagerMenu {
     $defaultMenu = @(
         (New-MenuAction "Manage Updates" {
             Select-PackagesToUpdate
-            pause
+            Invoke-StandardPause
         }),
         (New-MenuAction "List Installed Packages" {
             Get-InstalledPackages
-            pause
+            Invoke-StandardPause
         }),
         (New-MenuAction "Search Packages" {
             Search-Packages
-            pause
+            Invoke-StandardPause
         })
     )
 
@@ -3330,14 +3330,14 @@ function Start-MerakiBackup {
             $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
             if (-not $pythonCmd) {
                 Write-Host "Python not found in PATH. Please ensure Python is installed." -ForegroundColor Red
-                pause
+                Invoke-StandardPause
                 return
             }
 
             # Check if backup.py exists
             if (-not (Test-Path "backup.py")) {
                 Write-Host "backup.py not found in meraki-api directory." -ForegroundColor Red
-                pause
+                Invoke-StandardPause
                 return
             }
 
@@ -3368,7 +3368,7 @@ function Start-MerakiBackup {
         Write-Host "Please ensure the meraki-api folder exists in the dev directory (same level as powershell-console)." -ForegroundColor Yellow
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Start-CodeCount {
@@ -3379,14 +3379,14 @@ function Start-CodeCount {
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if (-not $pythonCmd) {
         Write-Host "`nPython not found in PATH. Please ensure Python is installed." -ForegroundColor Red
-        pause
+        Invoke-StandardPause
         return  # This is a hard error, exit to main menu
     }
 
     # Check if count-lines.py exists
     if (-not (Test-Path $countScriptPath)) {
         Write-Host "`ncount-lines.py not found at: $countScriptPath" -ForegroundColor Red
-        pause
+        Invoke-StandardPause
         return  # This is a hard error, exit to main menu
     }
 
@@ -3445,8 +3445,7 @@ function Start-CodeCount {
         }
 
         if ($menuOptions.Count -eq 0) {
-            Write-Host "Empty directory. Press any key to go back..." -ForegroundColor Yellow
-            [Console]::ReadKey($true) | Out-Null
+            Invoke-StandardPause -Message "Empty directory. Press Enter to go back..."
             if ($pathStack.Count -gt 0) {
                 $currentPath = $pathStack[-1]
                 $pathStack = $pathStack[0..($pathStack.Count - 2)]
@@ -3592,7 +3591,7 @@ function Start-CodeCount {
 
     if ($selectedItems.Count -eq 0 -and -not $countAll) {
         Write-Host "`nNo items selected." -ForegroundColor Yellow
-        pause
+        Invoke-StandardPause
         Start-CodeCount
         return
     }
@@ -3612,8 +3611,7 @@ function Start-CodeCount {
 
         # If there are also individual items selected, pause before showing them
         if ($selectedItems.Count -gt 0) {
-            Write-Host "Press Enter to view individual project counts..." -ForegroundColor Gray
-            Read-Host
+            Invoke-StandardPause -Message "Press Enter to view individual project counts..."
         }
     }
 
@@ -3637,18 +3635,15 @@ function Start-CodeCount {
 
         # Pause between items (but not after the last one)
         if ($currentItem -lt $itemCount) {
-            Write-Host "Press Enter to continue (or Q to quit viewing more)..." -ForegroundColor Gray -NoNewline
-            $key = [Console]::ReadKey($true)
-            Write-Host ""  # New line after key press
-
-            if ($key.Key -eq 'Q') {
+            $continue = Invoke-StandardPause -Message "Press Enter to continue (or Q/Esc to quit viewing more)..." -AllowQuit
+            if (-not $continue) {
                 Write-Host "`nSkipping remaining projects..." -ForegroundColor Yellow
                 break
             }
         }
     }
 
-    pause
+    Invoke-StandardPause
     Start-CodeCount
 }
 
@@ -3659,7 +3654,7 @@ function Get-BackupScriptPath {
 
     if (-not (Test-Path $backupScriptPath)) {
         Write-Host "backup-dev.ps1 not found at: $backupScriptPath" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return $null
     }
 
@@ -3699,7 +3694,7 @@ function Invoke-BackupScript {
     }
 
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 
@@ -3748,7 +3743,7 @@ function Start-BackupDevEnvironment {
 
     if ($confirm.ToLower() -eq "n") {
         Write-Host "Backup cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -3798,26 +3793,26 @@ function Show-MainMenu {
     $defaultMenu = @(
         (New-MenuAction "Ping Google" {
             Start-InteractivePing -Target "google.com"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "IP Config" {
             Show-NetworkConfiguration
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "AWS Login" {
             Start-AwsWorkflow
         }),
         (New-MenuAction "PowerShell Profile Edit" {
             Invoke-Expression "code '$($script:Config.paths.profilePath)'"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Okta YAML Edit" {
             Invoke-Expression "code '$($script:Config.paths.oktaYamlPath)'"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Whitelist Links Folder" {
             Invoke-Expression "icacls '$($script:Config.paths.linksPath)' /t /setintegritylevel m"
-            pause
+    Invoke-StandardPause
         }),
         (New-MenuAction "Meraki Backup" {
             Start-MerakiBackup
@@ -3942,7 +3937,7 @@ function Invoke-AwsAuthentication {
     }
     catch {
         Write-Host "Authentication failed: $($_.Exception.Message)" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 }
@@ -4170,7 +4165,7 @@ function Sync-AwsAccountsFromOkta {
     $confirm = Read-Host "Continue with sync? (Y/n)"
     if ($confirm.ToLower() -eq "n") {
         Write-Host "Sync cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -4201,7 +4196,7 @@ function Sync-AwsAccountsFromOkta {
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Error: okta-aws-cli failed with exit code $LASTEXITCODE" -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -4736,7 +4731,7 @@ function Sync-AwsAccountsFromOkta {
         Write-Host ""
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Show-AwsAccountMenu {
@@ -5028,7 +5023,7 @@ function Start-AlohaRemoteAccess {
             return
         } else {
             Write-Host "Cannot proceed without remote host configuration." -ForegroundColor Red
-            pause
+    Invoke-StandardPause
             return
         }
     }
@@ -5038,7 +5033,7 @@ function Start-AlohaRemoteAccess {
 
     if ($useSettings.ToLower() -eq "n") {
         Write-Host "Aloha remote access cancelled." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5137,13 +5132,13 @@ function Get-Ec2InstanceInfo {
         if ($LASTEXITCODE -ne 0) {
             Write-Host "AWS credentials have expired or are invalid." -ForegroundColor Red
             Write-Host "Please re-authenticate using 'Change AWS Account' option." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
     catch {
         Write-Host "Unable to verify AWS credentials." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5221,7 +5216,7 @@ function Get-Ec2InstanceInfo {
     }
 
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 function Get-RunningInstances {
@@ -5314,7 +5309,7 @@ function Select-Ec2Instance {
 
     if ($instances.Count -eq 0) {
         Write-Host "No instances found." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return $null
     }
 
@@ -5399,7 +5394,7 @@ function Set-DefaultInstanceId {
     # Check if user cancelled (pressed Q)
     if ($selectedInstance -is [hashtable] -and $selectedInstance.Cancelled) {
         Write-Host "Selection cancelled - no changes made." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5421,7 +5416,7 @@ function Set-DefaultInstanceId {
     # Ensure the environment exists in config
     if (-not $config.environments.$global:currentAwsEnvironment) {
         Write-Host "Error: Environment '$global:currentAwsEnvironment' not found in config." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5454,7 +5449,7 @@ function Set-DefaultInstanceId {
     Write-Host "✓ Changes saved to config.json" -ForegroundColor Green
     Write-Host ""
 
-    pause
+    Invoke-StandardPause
 }
 
 function Set-DefaultRemoteHostInfo {
@@ -5468,7 +5463,7 @@ function Set-DefaultRemoteHostInfo {
     # Check if user cancelled (pressed Q)
     if ($selectedInstance -is [hashtable] -and $selectedInstance.Cancelled) {
         Write-Host "Selection cancelled - no changes made." -ForegroundColor Yellow
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5483,7 +5478,7 @@ function Set-DefaultRemoteHostInfo {
         $confirm = Read-Host "Clear all remote host settings for this account? (y/N)"
         if ($confirm.ToLower() -ne "y") {
             Write-Host "Configuration not changed." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     } else {
@@ -5543,7 +5538,7 @@ function Set-DefaultRemoteHostInfo {
         $confirm = Read-Host "Save this configuration? (Y/n)"
         if ($confirm.ToLower() -eq "n") {
             Write-Host "Configuration not saved." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
@@ -5555,7 +5550,7 @@ function Set-DefaultRemoteHostInfo {
     # Ensure the environment exists in config
     if (-not $config.environments.$global:currentAwsEnvironment) {
         Write-Host "Error: Environment '$global:currentAwsEnvironment' not found in config." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5604,7 +5599,7 @@ function Set-DefaultRemoteHostInfo {
     Write-Host "✓ Changes saved to config.json" -ForegroundColor Green
     Write-Host ""
 
-    pause
+    Invoke-StandardPause
 }
 
 function Get-InstanceNameById {
@@ -5703,7 +5698,7 @@ function Show-CurrentInstanceSettings {
         }
     }
 
-    pause
+    Invoke-StandardPause
 }
 
 function Test-InstanceConnectivity {
@@ -5851,13 +5846,13 @@ function Get-VpnConnections {
         if ($LASTEXITCODE -ne 0) {
             Write-Host "AWS credentials have expired or are invalid." -ForegroundColor Red
             Write-Host "Please re-authenticate using 'Change AWS Account' option." -ForegroundColor Yellow
-            pause
+    Invoke-StandardPause
             return
         }
     }
     catch {
         Write-Host "Unable to verify AWS credentials." -ForegroundColor Red
-        pause
+    Invoke-StandardPause
         return
     }
 
@@ -5930,7 +5925,7 @@ function Get-VpnConnections {
 
     # Pause before returning to Instance Management menu
     Write-Host ""
-    pause
+    Invoke-StandardPause
 }
 
 function Get-FortiGateConfigs {

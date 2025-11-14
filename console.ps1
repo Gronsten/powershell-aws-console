@@ -3323,9 +3323,14 @@ function Start-MerakiBackup {
     Write-Host "Starting Meraki Backup..." -ForegroundColor Green
     Write-Host ""
 
-    # Check if meraki-api folder exists in parent directory (C:\AppInstall\dev\meraki-api)
+    # Read devRoot from config.json (same as count-lines.py does)
     # meraki-api is a separate project at the same level as powershell-console
-    $devRoot = Split-Path $PSScriptRoot -Parent
+    if ($script:Config.paths.devRoot) {
+        $devRoot = $script:Config.paths.devRoot
+    } else {
+        # Fallback to parent directory if devRoot not configured
+        $devRoot = Split-Path $PSScriptRoot -Parent
+    }
     $merakiPath = Join-Path $devRoot "meraki-api"
 
     if (Test-Path $merakiPath) {
